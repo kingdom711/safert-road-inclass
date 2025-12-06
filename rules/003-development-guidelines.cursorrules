@@ -1,0 +1,41 @@
+# Development Guidelines
+
+## Version Control
+- System: Git
+- Repository Management: GitHub
+- Branching Strategy: Git Flow
+
+## Development Priorities
+1. Utilize listed tech stack components (see 002-tech-stack.cursorrules)
+2. Prefer frameworks with robust documentation and community support
+3. Implement proven design patterns and React best practices
+4. Type-safety first with TypeScript (no `any` types)
+5. Mobile-responsive design using `use-mobile.tsx` hook
+
+## Architecture Principles
+- Component-based modular design
+- Custom hooks for reusable logic
+- Firebase real-time synchronization
+- Role-based access control (RBAC)
+- Scalable folder structure:
+  - `src/components/ui` - Reusable UI primitives (shadcn/ui)
+  - `src/components/{feature}` - Feature-specific components
+  - `src/pages` - Route pages
+  - `src/lib` - Utilities, types, constants
+  - `src/hooks` - Custom React hooks
+  - `src/firebase` - Firebase configuration and helpers
+
+## Code Quality Standards
+- Strict TypeScript mode enabled
+- No `any` types allowed
+- All data models defined in `src/lib/types.ts`
+- Tailwind CSS only (no inline styles)
+- Component props interfaces defined at file top
+- Error handling with try-catch and user feedback (Toast)
+
+## Performance Optimization
+- Lazy loading for routes
+- Proper React memoization when needed
+- Firestore query optimization
+- Efficient re-render management
+

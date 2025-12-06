@@ -1,0 +1,27 @@
+# PROJECT OVERVIEW: Safety Road (안전의 길) Backend
+
+## Vision
+산업 현장의 안전 관리를 디지털화하여 체크리스트 기반의 효율적인 안전 점검 시스템을 제공하는 백엔드 시스템을 구축합니다. 
+법정 자율점검표(사다리/고소/밀폐)의 전산화와 AI 기반 위험 분석을 지원하며, 견고한 데이터 무결성과 안정적인 트랜잭션 처리를 보장합니다.
+
+## Core Features (MVP)
+- **Auth & RBAC**: JWT 기반 인증 및 역할별(기술인/감독자/안전관리자) 권한 관리
+- **Checklist System**: 작업 유형별 템플릿 로딩, 체크리스트 작성/제출/승인 워크플로우
+- **Risk Management**: '아니요' 응답 및 AI 분석 기반 위험도 평가 및 대시보드 데이터 제공
+- **Action Tracking**: 조치 이력(텍스트+사진) 기록 및 상태 관리
+- **Integration**: AI 분석 모듈 및 이미지 스토리지(S3) 연동
+
+## Target Audience
+- **기술인(Worker)**: 모바일 웹을 통한 간편한 체크리스트 작성
+- **관리감독자(Supervisor)**: 제출된 내역 승인/반려
+- **안전관리자(Safety Manager)**: 전체 현장 위험 현황 모니터링 및 조치
+
+## Project Goals
+- **Stability**: Java Spring Boot 기반의 안정적인 REST API 제공
+- **Scalability**: Layered Architecture 및 JPA 최적화를 통한 확장성 확보
+- **Reliability**: 데이터 정합성 보장 및 감사 로그(Audit Log) 기록
+
+## Success Metrics
+- **API Performance**: 체크리스트 조회/저장 API 평균 응답시간 3초 이내 (p95)
+- **Reliability**: 데이터 손실 0건, 5xx 에러 최소화
+- **Security**: OWASP Top 10 준수 및 철저한 권한 검증

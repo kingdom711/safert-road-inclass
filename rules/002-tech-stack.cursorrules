@@ -1,0 +1,30 @@
+# Technical Stack: Safety Road Backend
+
+## Core Framework
+- **Language**: Java 17 (LTS)
+- **Framework**: Spring Boot 3.x
+- **Build Tool**: Gradle 8.x (Groovy DSL)
+
+## Database & Storage
+- **RDBMS**: MySQL 8.x (InnoDB, utf8mb4)
+- **ORM**: Spring Data JPA (Hibernate)
+- **Migration**: Flyway (Recommended for schema management)
+- **Storage**: AWS S3 (Image files)
+
+## Security
+- **Authentication**: Spring Security 6.x + JWT
+- **Encryption**: BCrypt for passwords
+
+## API Documentation
+- **Spec**: OpenAPI 3.0
+- **Tool**: Swagger UI (Springdoc OpenAPI)
+
+## Testing
+- **Unit Test**: JUnit 5, Mockito
+- **Integration Test**: @SpringBootTest
+- **API Test**: Postman / Swagger
+
+## Infrastructure (Dev/Prod)
+- **Cloud**: AWS (EC2/ECS, RDS)
+- **CI/CD**: GitHub Actions (Planned)
+- **AI Integration**: Python Bridge (REST API Call)

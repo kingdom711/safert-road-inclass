@@ -1,0 +1,211 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the 안전의 길 application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "User's role within the application (Worker, Supervisor, SafetyManager)."
+        },
+        "name": {
+          "type": "string",
+          "description": "User's display name."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "role",
+        "name"
+      ]
+    },
+    "ChecklistTemplate": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChecklistTemplate",
+      "type": "object",
+      "description": "Represents a template for a safety checklist, defining the questions and work type.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChecklistTemplate entity."
+        },
+        "workType": {
+          "type": "string",
+          "description": "The type of work the checklist applies to (e.g., Ladder, Scaffolding, Confined Space)."
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the checklist template."
+        },
+        "items": {
+          "type": "array",
+          "description": "Array of checklist items (questions).",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "workType",
+        "version",
+        "items"
+      ]
+    },
+    "Checklist": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Checklist",
+      "type": "object",
+      "description": "Represents a completed safety checklist instance.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Checklist entity."
+        },
+        "templateId": {
+          "type": "string",
+          "description": "Reference to ChecklistTemplate. (Relationship: ChecklistTemplate 1:N Checklist)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Checklist)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the checklist (submitted, approved, rejected)."
+        },
+        "responses": {
+          "type": "array",
+          "description": "Array of responses to the checklist items.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "riskLevel": {
+          "type": "string",
+          "description": "Overall risk level of the checklist (Safe, Warning, Danger)."
+        },
+        "aiAnalysisResult": {
+          "type": "string",
+          "description": "Result of the AI analysis of uploaded photos."
+        }
+      },
+      "required": [
+        "id",
+        "templateId",
+        "userId",
+        "status",
+        "responses",
+        "riskLevel",
+        "aiAnalysisResult"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. Path-based ownership ensures only the user can access their own data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/checklist_templates/{checklistTemplateId}",
+        "definition": {
+          "entityName": "ChecklistTemplate",
+          "schema": {
+            "$ref": "#/backend/entities/ChecklistTemplate"
+          },
+          "description": "Stores checklist templates that define the structure and items for different work types.",
+          "params": [
+            {
+              "name": "checklistTemplateId",
+              "description": "The unique ID of the checklist template."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/checklists/{checklistId}",
+        "definition": {
+          "entityName": "Checklist",
+          "schema": {
+            "$ref": "#/backend/entities/Checklist"
+          },
+          "description": "Stores individual checklist instances created by users. Path-based ownership enforced through the userId. Includes userId field for authorization.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who created the checklist."
+            },
+            {
+              "name": "checklistId",
+              "description": "The unique ID of the checklist."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_supervisor/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection to store supervisor roles. The existence of a document indicates the user is a supervisor. Used for DBAC.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the supervisor user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_safetymanager/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection to store safety manager roles. The existence of a document indicates the user is a safety manager. Used for DBAC.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the safety manager user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to ensure security, scalability, and ease of debugging, while adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). It also follows the mandated design strategies.\n\nAuthorization Independence is achieved through denormalization. For example, access to `checklists` depends on the user and supervisor/manager roles. These roles, instead of being fetched via `get()` calls to the `users` collection during rule evaluation, are checked by querying the existence of documents in dedicated role collections (e.g., `/roles_supervisor/{userId}`). Checklist documents include the `userId` for enforcing ownership. \n\nStructural Segregation is applied by keeping user data separate from global data (checklist templates). This ensures that different collections can have different security rules.\n\nAccess Modeling is implemented as follows:\n\n*   **Private Data:** User-owned data such as profile information is stored under `/users/{userId}`.\n*   **Collaborative Data:** Approval workflows are handled using role-based access control via dedicated role collections.\n\nQAPs (Rules are not Filters) are supported because the security rules can efficiently validate access based on the existence of roles and path-based ownership. List operations are secure as they do not rely on filtering based on data content within the documents, preventing insecure data exposure.\n\nInvariants such as ownership are enforced by requiring the `userId` in checklist documents and matching them against the authenticated user's ID. Timestamps can be added in the future and enforced via rules to ensure data integrity."
+  }
+}
