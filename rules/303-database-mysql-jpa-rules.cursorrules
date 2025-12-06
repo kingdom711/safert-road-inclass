@@ -1,0 +1,148 @@
+---
+description: Safety Road MySQL 데이터베이스 설계 및 JPA/Hibernate 사용 규칙
+globs: ["**/*.java", "**/*.sql"]
+alwaysApply: false
+---
+# Database & JPA Rules - Safety Road
+
+## 1. Database Design (MySQL 8.x)
+- **Naming Convention**:
+  - Tables: `snake_case`, 복수형 명사 (e.g., `users`, `checklists`, `checklist_items`)
+  - Columns: `snake_case` (e.g., `user_id`, `created_at`, `risk_flag`)
+  
+- **Primary Keys**:
+  - `BigInt AUTO_INCREMENT` 사용 (내부 시스템이므로 UUID 불필요)
+  - 컬럼명: `id` (각 테이블에 통일)
+
+- **Audit Columns** (모든 테이블 필수):
+  - `created_at DATETIME DEFAULT CURRENT_TIMESTAMP`
+  - `updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  - `created_by BIGINT` (선택, JPA Auditing 활용)
+  - `updated_by BIGINT` (선택, JPA Auditing 활용)
+
+- **Indexes**:
+  - Foreign Key는 자동 인덱스 생성되나 명시적 확인
+  - `WHERE`, `ORDER BY`에 자주 사용되는 컬럼 인덱스 추가
+  - 예: `INDEX idx_checklist_status (status)`, `INDEX idx_checklist_user (created_by)`
+
+- **Charset & Collation**:
+  - `utf8mb4` (이모지 지원)
+  - `utf8mb4_unicode_ci` (대소문자 구분 없음)
+
+## 2. JPA / Hibernate Best Practices
+- **Fetch Strategy**:
+  - **명시적 `FetchType.LAZY` 설정**:
+    ```java
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+    ```
+  - `@OneToMany`는 기본 LAZY이므로 명시 불필요
+
+- **N+1 Problem 해결**:
+  - Repository에서 `JOIN FETCH` 사용:
+    ```java
+    @Query("SELECT c FROM Checklist c JOIN FETCH c.items WHERE c.id = :id")
+    Checklist findByIdWithItems(@Param("id") Long id);
+    ```
+  - 또는 `@EntityGraph` 활용:
+    ```java
+    @EntityGraph(attributePaths = {"items", "user"})
+    Checklist findById(Long id);
+    ```
+
+- **Transactions**:
+  - Service 클래스 레벨: `@Transactional(readOnly = true)`
+  - CUD 메서드: `@Transactional` (readOnly 오버라이드)
+  - 예:
+    ```java
+    @Service
+    @Transactional(readOnly = true)
+    public class ChecklistService {
+        @Transactional
+        public void submit(ChecklistRequest request) { ... }
+    }
+    ```
+
+- **Entities 설계**:
+  - `@Entity` + `@Table(name = "테이블명")`
+  - 비즈니스 로직은 Entity 메서드로 캡슐화 (Setter 지양):
+    ```java
+    public void approve(User approver) {
+        validateCanApprove();
+        this.status = ChecklistStatus.APPROVED;
+        this.approvedBy = approver;
+        this.approvedAt = LocalDateTime.now();
+    }
+    ```
+
+- **BaseTimeEntity** (공통 상속):
+  ```java
+  @MappedSuperclass
+  @EntityListeners(AuditingEntityListener.class)
+  public abstract class BaseTimeEntity {
+      @CreatedDate
+      @Column(updatable = false)
+      private LocalDateTime createdAt;
+      
+      @LastModifiedDate
+      private LocalDateTime updatedAt;
+  }
+  ```
+
+## 3. Migration (Flyway)
+- **디렉토리 구조**: `backend/src/main/resources/db/migration/`
+- **파일 네이밍**: `V{version}__{description}.sql`
+  - 예: `V1__init_schema.sql`, `V2__add_risk_assessment_table.sql`
+- **주의사항**:
+  - 절대 기존 migration 파일 수정 금지
+  - 변경 사항은 새로운 V+1 파일로 추가
+  - `application.properties`에 Flyway 활성화:
+    ```properties
+    spring.flyway.enabled=true
+    spring.flyway.locations=classpath:db/migration
+    ```
+
+## 4. Safety Road Specific Schema Overview
+### 핵심 엔티티
+- `users`: 사용자 정보 및 역할 (role: WORKER/SUPERVISOR/SAFETY_MANAGER)
+- `work_types`: 작업 유형 (사다리/고소작업대/밀폐공간)
+- `checklist_templates`: 표준 점검표 템플릿
+- `checklist_item_templates`: 템플릿 항목 (법정 점검 항목)
+- `checklists`: 작성된 체크리스트 인스턴스
+- `checklist_items`: 개별 항목 응답 (yes/no, risk_flag)
+- `photos`: 작업 사진
+- `ai_analysis_results`: AI 분석 결과 (위험도, 태그)
+- `action_records`: 조치 내용 및 사진
+- `notifications`: 알림
+
+### 주요 관계
+- `User` 1:N `Checklist` (created_by)
+- `ChecklistTemplate` 1:N `ChecklistItemTemplate`
+- `Checklist` 1:N `ChecklistItem`
+- `Checklist` 1:N `Photo`
+- `Photo` 1:1 `AIAnalysisResult`
+- `Checklist` 1:N `ActionRecord`
+
+## 5. Query Performance Tips
+- **Pagination**: `Pageable` 사용 (Spring Data JPA)
+  ```java
+  Page<Checklist> findByStatus(ChecklistStatus status, Pageable pageable);
+  ```
+- **Projection**: 필요한 컬럼만 조회 (DTO Projection)
+  ```java
+  @Query("SELECT new com.jinsung...ChecklistSummaryDto(c.id, c.title, c.status) FROM Checklist c")
+  List<ChecklistSummaryDto> findSummaries();
+  ```
+- **Batch Size**: `@BatchSize(size = 10)` 활용 (컬렉션 조회 최적화)
+
+## 6. Common Pitfalls (피해야 할 것)
+- ❌ FetchType.EAGER 사용 (N+1 문제 유발)
+- ❌ `@Transactional` 없이 Lazy Loading 시도 (LazyInitializationException)
+- ❌ Entity를 Controller에서 직접 반환 (무한 순환 참조 위험)
+- ❌ Migration 파일 수정 (버전 불일치)
+
+## See also:
+- [301-spring-boot-java-rules.cursorrules](301-spring-boot-java-rules.cursorrules)
+- [304-api-rest-design-rules.cursorrules](304-api-rest-design-rules.cursorrules)
+

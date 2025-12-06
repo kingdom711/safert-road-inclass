@@ -1,0 +1,196 @@
+---
+description: Safety Road Git 커밋, 푸시, PR 규칙 (팀 협업 및 AI 에이전트 안전성)
+globs: ["**/*"]
+alwaysApply: false
+---
+# Git Commit, Push, and PR Rules - Safety Road
+
+## Atomic Commits (원자적 커밋)
+- **한 커밋 = 하나의 논리적 변경** (단일 목적, 완전히 동작하는 상태)
+- 각 커밋은 컴파일 가능하고 테스트 통과해야 함
+- `git add -p`로 선택적 스테이징 활용 (관련 없는 변경 혼재 방지)
+- 커밋 메시지는 **WHY**(왜 변경했는지)를 설명, WHAT은 diff로 확인 가능
+
+## Commit Message Format (Conventional Commits)
+### 기본 구조
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+### Types (Safety Road Context)
+- `feat`: 새로운 기능 추가
+  - 예: `feat(checklist): 체크리스트 제출 API 구현`
+- `fix`: 버그 수정
+  - 예: `fix(auth): JWT 토큰 만료 시간 오류 수정`
+- `refactor`: 코드 리팩토링 (기능 변경 없음)
+  - 예: `refactor(service): ChecklistService 메서드 분리`
+- `docs`: 문서 수정
+  - 예: `docs(readme): API 문서 업데이트`
+- `test`: 테스트 코드 추가/수정
+  - 예: `test(checklist): ChecklistService 단위 테스트 추가`
+- `chore`: 빌드 설정, 패키지 관리 등
+  - 예: `chore(deps): Spring Boot 3.2.1 업그레이드`
+- `style`: 코드 포맷팅 (로직 변경 없음)
+- `perf`: 성능 개선
+
+### Subject 규칙
+- 명령형 (imperative mood), 소문자 시작, 마침표 없음
+- 최대 50자
+- 예: ✅ `add JWT validation logic`, ❌ `Added JWT validation logic.`
+
+### Body (선택)
+- 변경 이유, 변경 전/후 동작 설명
+- 72자마다 줄바꿈
+
+### Footer (선택)
+- Issue 참조: `Closes #123`, `Refs #456`
+- Breaking Change: `BREAKING CHANGE: ...`
+
+### 예시
+```
+feat(auth): implement JWT refresh token rotation
+
+- Add RefreshTokenRepository for token storage
+- Implement automatic token rotation on refresh
+- Add validation for expired refresh tokens
+
+Closes #45
+```
+
+## Branch Strategy (Git Flow)
+### Branch Naming Convention
+```
+<type>/<issue-number>-<short-description>
+```
+- 예:
+  - `feat/003-auth-jwt-implementation`
+  - `fix/012-checklist-validation-bug`
+  - `docs/015-api-documentation-update`
+
+### Main Branches
+- `master` (또는 `main`): 운영 배포 가능한 안정 버전
+- `develop`: 개발 브랜치 (다음 릴리스 준비)
+
+### Feature Branches
+- **항상 issue-specific 브랜치 생성 후 작업 시작**
+- `develop`에서 분기: `git checkout -b feat/123-feature-name develop`
+- 작업 완료 후 PR 생성
+- **절대 `master`나 `develop`에 직접 커밋 금지**
+
+### Branch Push
+- 브랜치 생성 즉시 원격에 푸시: `git push -u origin feat/123-feature-name`
+- 다른 팀원이 진행 상황 확인 가능
+
+## AI Agent Safety Rules (중요)
+### Pre-Commit Checks
+1. **현재 브랜치 확인**: `git branch --show-current`
+   - `master`/`main`에 있으면 경고
+2. **변경 사항 확인**: `git status`, `git diff`
+   - 의도하지 않은 파일 포함 여부 체크
+3. **원격 상태 확인**: `git fetch`, `git status`
+   - 로컬이 뒤처진 경우 `git pull --rebase` 먼저 수행
+
+### Push Safety
+- **절대 Force Push 금지** (`--force`, `-f`) (사용자 명시적 요청 시에만)
+- **Master/Main으로 직접 Push 금지**
+  - 감지 시 경고 출력 및 중단
+- `--no-verify` 플래그는 사용자 명시적 요청 시에만 사용
+- 원격 연결 확인: `git ls-remote`
+
+### 예외 상황 처리
+- Credential 오류 시: 사용자에게 안내 후 중단
+- Conflict 발생 시: 자동 해결 시도 금지, 사용자에게 안내
+
+## Pull Request (PR) Guidelines
+
+### PR 생성 시점
+- 첫 커밋 푸시 후 즉시 Draft PR 생성: `gh pr create --draft`
+- 작업 완료 시 "Ready for Review"로 전환
+
+### PR Description 필수 항목
+```markdown
+## 변경 사항 요약
+(전체 git diff를 분석하여 의미론적으로 요약. 파일 나열만 하지 말 것)
+
+## 관련 Issue
+Closes #123
+
+## 테스트 방법
+1. 로그인 후 체크리스트 제출 화면 이동
+2. 필수 항목 입력 후 제출 버튼 클릭
+3. 성공 메시지 확인
+
+## 스크린샷 (선택)
+(UI 변경 시 첨부)
+
+## 체크리스트
+- [ ] 테스트 코드 추가/수정
+- [ ] API 문서 업데이트 (Swagger)
+- [ ] Linter 에러 없음
+- [ ] 본인 코드 리뷰 완료
+```
+
+### Review 및 Merge
+- 최소 1명 이상 승인 필요
+- **Self-merge 금지** (승인 없이 본인이 바로 머지)
+- Merge 전 최신 `develop` rebase: `git pull --rebase origin develop`
+- Conflict 해결 후 재푸시
+
+## Team Collaboration Best Practices
+### Daily Sync
+- 작업 시작 전: `git pull origin develop`
+- Feature 브랜치에서 주기적으로 `develop` rebase
+
+### Commit Frequency
+- 작은 단위로 자주 커밋 (논리적 단위)
+- 하루 종료 시 반드시 푸시 (작업 내용 공유)
+
+### Code Review 문화
+- PR은 24시간 이내 리뷰 목표
+- 건설적 피드백 작성 (개선 제안 + 이유)
+- 사소한 스타일은 자동화 도구(Linter)에 맡기기
+
+## Examples
+### ✅ Good
+```bash
+# 1. Issue 기반 브랜치 생성
+git checkout -b feat/003-auth-jwt develop
+
+# 2. 작업 및 원자적 커밋
+git add src/main/java/...auth/JwtTokenProvider.java
+git commit -m "feat(auth): add JWT token generation logic"
+
+git add src/test/java/...auth/JwtTokenProviderTest.java
+git commit -m "test(auth): add JwtTokenProvider unit tests"
+
+# 3. 원격 푸시
+git push -u origin feat/003-auth-jwt
+
+# 4. Draft PR 생성
+gh pr create --draft --title "[WIP] JWT 인증 구현" --body "..."
+
+# 5. 작업 완료 후 Ready for Review
+gh pr ready
+```
+
+### ❌ Bad
+```bash
+# 모든 변경사항을 한 번에 커밋
+git add .
+git commit -m "updates"
+
+# Master에 직접 푸시
+git push origin master  # ❌ 절대 금지
+
+# Force Push
+git push --force  # ❌ 팀원 작업 덮어씀
+```
+
+## See also:
+- [003-development-guidelines.cursorrules](003-development-guidelines.cursorrules)
+- [202-github-issue-handling.cursorrules](202-github-issue-handling.cursorrules)
+

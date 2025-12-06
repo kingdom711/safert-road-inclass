@@ -1,30 +1,72 @@
-# Technical Stack: Safety Road Backend
+---
+description: Safety Road 프로젝트 기술 스택 정의
+globs: ["**/*"]
+alwaysApply: true
+---
+# Technical Stack - Safety Road
+Referenced in: [001-project-overview.cursorrules](001-project-overview.cursorrules)
 
-## Core Framework
+## Backend (Spring Boot)
 - **Language**: Java 17 (LTS)
 - **Framework**: Spring Boot 3.x
-- **Build Tool**: Gradle 8.x (Groovy DSL)
+- **Build Tool**: Gradle 8.x
+- **Database**: MySQL 8.x (InnoDB, utf8mb4)
+- **ORM**: Spring Data JPA (Hibernate 6.x)
+- **Security**: Spring Security 6.x + JWT
+- **Validation**: Jakarta Validation (Bean Validation 3.0)
+- **Testing**: JUnit 5, Mockito, AssertJ
+- **API Documentation**: Swagger/OpenAPI 3.0
 
-## Database & Storage
-- **RDBMS**: MySQL 8.x (InnoDB, utf8mb4)
-- **ORM**: Spring Data JPA (Hibernate)
-- **Migration**: Flyway (Recommended for schema management)
-- **Storage**: AWS S3 (Image files)
+## Backend Architecture
+- **패키지 구조**: Domain-Driven Design (DDD) 기반
+  - `backend/src/main/java/com/jinsung/safety_road_inclass/`
+    - `global/`: 공통 설정, 예외 처리, 유틸리티
+    - `domain/`: 비즈니스 도메인별 패키지 (7개 도메인)
+- **레이어 패턴**: Controller → Service → Repository
+- **DTO 변환**: Entity는 Controller에 노출 금지, DTO 매핑 필수
 
-## Security
-- **Authentication**: Spring Security 6.x + JWT
-- **Encryption**: BCrypt for passwords
+## Frontend (React)
+- **Language**: TypeScript 5.x
+- **Framework**: React 18
+- **Build Tool**: Vite 5.x
+- **Styling**: TailwindCSS 3.x
+- **State Management**: React Context API (또는 Zustand)
+- **HTTP Client**: Axios
+- **Routing**: React Router 6.x
+- **Form Validation**: React Hook Form + Yup/Zod
+- **Testing**: Vitest, React Testing Library
 
-## API Documentation
-- **Spec**: OpenAPI 3.0
-- **Tool**: Swagger UI (Springdoc OpenAPI)
+## AI & Image Analysis
+- **Provider**: Google Gemini Vision API (또는 OpenAI GPT-4 Vision)
+- **Communication**: REST API (Backend → External AI Service)
+- **Fallback**: AI 분석 실패 시 수동 검토로 폴백
 
-## Testing
-- **Unit Test**: JUnit 5, Mockito
-- **Integration Test**: @SpringBootTest
-- **API Test**: Postman / Swagger
+## Infrastructure & Tools
+- **Containerization**: Docker, Docker Compose (개발 환경)
+- **Version Control**: Git, GitHub
+- **API Testing**: Postman, Thunder Client
+- **Database Migration**: Flyway (Schema versioning)
+- **File Storage**: Local Storage (개발), AWS S3 (운영)
 
-## Infrastructure (Dev/Prod)
-- **Cloud**: AWS (EC2/ECS, RDS)
-- **CI/CD**: GitHub Actions (Planned)
-- **AI Integration**: Python Bridge (REST API Call)
+## Domain-Specific Tech Stack Mapping
+| Domain | Tech Focus |
+|:---|:---|
+| **Auth** | Spring Security, JWT, BCrypt |
+| **Template** | JPA Seeding (CommandLineRunner) |
+| **Checklist** | Multipart File Upload, Transaction Management |
+| **Review** | State Machine Pattern, Event Publishing |
+| **Risk** | Business Logic Layer (위험도 계산 공식) |
+| **AI** | WebClient (비동기 HTTP), External API Integration |
+| **Notification** | SSE (Server-Sent Events) 또는 WebSocket |
+
+## Development Environment
+- **Java**: OpenJDK 17
+- **Node.js**: v18+ (LTS)
+- **MySQL**: 8.0+ (Docker 컨테이너 권장)
+- **IDE**: IntelliJ IDEA (Backend), VS Code (Frontend)
+
+## See also:
+- [301-spring-boot-java-rules.cursorrules](301-spring-boot-java-rules.cursorrules) for Java/Spring rules
+- [303-database-mysql-jpa-rules.cursorrules](303-database-mysql-jpa-rules.cursorrules) for Database rules
+- [304-api-rest-design-rules.cursorrules](304-api-rest-design-rules.cursorrules) for API standards
+
