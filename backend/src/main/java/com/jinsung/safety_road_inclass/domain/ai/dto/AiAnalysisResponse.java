@@ -21,3 +21,4 @@ public class AiAnalysisResponse {
     private String message;
 }
 
+
