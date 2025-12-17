@@ -49,6 +49,7 @@ public class SecurityConfig {
                 // Public endpoints (인증 불필요)
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/health").permitAll()
+                .requestMatchers("/api/v1/ai/**").permitAll()  // AI 분석 API (테스트용)
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
