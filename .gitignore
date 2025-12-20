@@ -72,6 +72,10 @@ pnpm-lock.yaml
 *.key
 secrets/
 
+# Application Properties with Secrets
+backend/src/main/resources/application-dev.properties
+backend/src/main/resources/application-mysql.properties
+
 # ===========================================
 # IDE & Editor
 # ===========================================
