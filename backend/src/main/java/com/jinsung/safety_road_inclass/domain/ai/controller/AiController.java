@@ -7,6 +7,7 @@ import com.jinsung.safety_road_inclass.domain.ai.service.AiAnalysisService;
 import com.jinsung.safety_road_inclass.global.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -20,7 +21,7 @@ import java.io.IOException;
  * - 텍스트 기반 위험 분석
  * - 이미지 기반 위험 분석
  */
-@Tag(name = "AI Analysis", description = "AI 기반 위험 분석 API (현재 Mock 데이터)")
+@Tag(name = "AI Analysis", description = "AI 기반 위험 분석 API (Gemini API 연동)")
 @RestController
 @RequestMapping("/api/v1/ai")
 @RequiredArgsConstructor
@@ -31,10 +32,10 @@ public class AiController {
 
     @Operation(
         summary = "텍스트 기반 위험 분석", 
-        description = "체크리스트 내용을 AI가 분석하여 위험 요인과 개선 대책을 제안합니다. (현재 Mock 데이터 반환)"
+        description = "체크리스트 내용을 Gemini AI가 분석하여 위험 요인과 개선 대책을 제안합니다."
     )
     @PostMapping("/analyze")
-    public ApiResponse<AiAnalysisResponse> analyzeText(@RequestBody AiAnalysisRequest request) {
+    public ApiResponse<AiAnalysisResponse> analyzeText(@Valid @RequestBody AiAnalysisRequest request) {
         log.info("AI 텍스트 분석 요청 수신: checklistId={}", request.getChecklistId());
         
         AiAnalysisResponse response = aiAnalysisService.analyzeText(request);
@@ -67,7 +68,7 @@ public class AiController {
     )
     @GetMapping("/health")
     public ApiResponse<String> healthCheck() {
-        return ApiResponse.success("AI Analysis Service is running (Mock Mode)");
+        return ApiResponse.success("AI Analysis Service is running (Gemini API Mode)");
     }
 }
 
