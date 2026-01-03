@@ -1,0 +1,615 @@
+---
+description: Safety Road 프로젝트 코드 주석 작성 규칙 - 비개발자 이해 가능한 엔지니어링 설명 필수
+globs: ["**/*.java", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+alwaysApply: true
+---
+# Code Commenting Rules - Safety Road
+
+## 핵심 원칙
+**모든 코드는 비개발자(기획자, 디자이너, 프로젝트 매니저, 법무팀 등)도 이해할 수 있도록 엔지니어링 과정과 의사결정 배경을 충실히 설명하는 주석을 반드시 포함해야 합니다.**
+
+## 1. 주석 작성 필수 영역
+
+### 1.1 클래스/인터페이스 레벨 주석
+모든 public 클래스와 인터페이스는 다음 정보를 포함해야 합니다:
+
+```java
+/**
+ * 체크리스트 검토 및 승인 워크플로우를 처리하는 서비스 클래스입니다.
+ * 
+ * <h3>비즈니스 맥락</h3>
+ * 중대재해처벌법에 따라 체크리스트는 작업자 제출 → 감독자 검토 → 안전관리자 승인의 
+ * 3단계 승인 프로세스를 거쳐야 합니다. 이 서비스는 각 단계의 상태 전이와 
+ * 승인/반려 로직을 관리합니다.
+ * 
+ * <h3>주요 책임</h3>
+ * - 제출된 체크리스트를 감독자에게 배정
+ * - 감독자의 승인/반려 처리 및 상태 업데이트
+ * - 반려 시 작업자에게 알림 발송
+ * - 승인 이력 감사 로그 기록 (법적 증빙 목적)
+ * 
+ * <h3>엔지니어링 결정사항</h3>
+ * - 상태 전이는 Entity 내부 메서드로 캡슐화하여 무결성 보장
+ * - 트랜잭션 경계는 Service 레이어에서 관리 (데이터 일관성)
+ * - 알림 발송은 비동기 처리 (응답 시간 단축)
+ * 
+ * @author Safety Road Team
+ * @since 1.0.0
+ */
+@Service
+@RequiredArgsConstructor
+public class ReviewService {
+    // ...
+}
+```
+
+### 1.2 메서드 레벨 주석
+복잡한 비즈니스 로직을 가진 메서드는 다음을 포함해야 합니다:
+
+```java
+/**
+ * 체크리스트를 승인하고 다음 단계로 전이시킵니다.
+ * 
+ * <h3>비즈니스 프로세스</h3>
+ * 1. 현재 상태가 'SUBMITTED'인지 검증 (잘못된 상태 전이 방지)
+ * 2. 승인자 권한 확인 (감독자만 승인 가능)
+ * 3. 체크리스트 상태를 'APPROVED_SUPERVISOR'로 변경
+ * 4. 다음 승인자(안전관리자)에게 알림 발송
+ * 5. 승인 이력을 감사 로그에 기록 (법적 증빙)
+ * 
+ * <h3>엔지니어링 고려사항</h3>
+ * - 트랜잭션 내에서 상태 변경과 알림 발송을 처리하여 일관성 보장
+ * - 알림 실패 시에도 승인은 완료되도록 설계 (비즈니스 로직 우선)
+ * - 동시성 제어: 낙관적 잠금(@Version)으로 중복 승인 방지
+ * 
+ * <h3>예외 상황</h3>
+ * - 상태가 'SUBMITTED'가 아닌 경우: IllegalStateException
+ * - 승인자 권한이 없는 경우: AccessDeniedException
+ * - 체크리스트가 존재하지 않는 경우: ChecklistNotFoundException
+ * 
+ * @param checklistId 승인할 체크리스트 ID
+ * @param approverId 승인자 사용자 ID (SecurityContext에서 자동 주입)
+ * @return 승인 완료된 체크리스트 응답 DTO
+ * @throws IllegalStateException 상태 전이 규칙 위반 시
+ * @throws AccessDeniedException 승인 권한이 없을 때
+ */
+@Transactional
+public ChecklistResponse approveChecklist(Long checklistId, Long approverId) {
+    // 구현...
+}
+```
+
+### 1.3 복잡한 알고리즘/로직 주석
+비즈니스 규칙이나 복잡한 계산 로직은 단계별 설명이 필요합니다:
+
+```java
+/**
+ * 위험도 점수를 계산합니다.
+ * 
+ * <h3>계산 공식</h3>
+ * 위험도 = 빈도(Frequency) × 강도(Severity)
+ * 
+ * <h3>비즈니스 규칙</h3>
+ * - 빈도: 위험 상황 발생 가능성 (1=거의 없음, 5=매우 높음)
+ * - 강도: 위험 발생 시 피해 규모 (1=경미, 5=치명적)
+ * - 최종 위험도 등급:
+ *   - 1-5: LOW (낮음) → 일반 점검으로 충분
+ *   - 6-15: MEDIUM (보통) → 추가 안전 조치 필요
+ *   - 16-25: HIGH (높음) → 즉시 조치 및 작업 중단 고려
+ * 
+ * <h3>엔지니어링 결정</h3>
+ * - 점수 계산은 순수 함수로 구현 (테스트 용이성)
+ * - 등급 매핑은 Enum으로 관리 (유지보수성)
+ * - 점수 범위는 비즈니스 요구사항 변경 시 쉽게 수정 가능하도록 상수화
+ * 
+ * @param frequency 위험 발생 빈도 (1-5)
+ * @param severity 위험 강도 (1-5)
+ * @return 위험도 등급 (LOW, MEDIUM, HIGH)
+ */
+public RiskLevel calculateRiskLevel(int frequency, int severity) {
+    // 1단계: 기본 점수 계산
+    int score = frequency * severity;
+    
+    // 2단계: 점수 범위에 따른 등급 매핑
+    // (비즈니스 규칙: 1-5=LOW, 6-15=MEDIUM, 16-25=HIGH)
+    if (score <= 5) {
+        return RiskLevel.LOW;
+    } else if (score <= 15) {
+        return RiskLevel.MEDIUM;
+    } else {
+        return RiskLevel.HIGH;
+    }
+}
+```
+
+### 1.4 High-Abstraction Algorithm Comments
+For code implementing abstract algorithms (e.g., graph traversal, dynamic programming, machine learning inference), comments must document language-level and system-level concerns:
+
+```java
+/**
+ * Implements Dijkstra's shortest path algorithm for risk propagation analysis.
+ * 
+ * <h3>Algorithm Overview</h3>
+ * Finds the minimum risk path through a directed graph of safety checkpoints
+ * using a priority queue-based approach with O(V log V + E) time complexity.
+ * 
+ * <h3>Memory Management</h3>
+ * - Heap allocation: Priority queue stores O(V) vertices (worst-case: all vertices)
+ * - Stack frames: Recursive calls avoided; iterative approach prevents stack overflow
+ * - Temporary arrays: Distance array (O(V)) and predecessor array (O(V)) allocated once
+ * - Garbage collection: Short-lived objects (PriorityQueue nodes) eligible for GC after method return
+ * 
+ * <h3>Variable Lifecycle</h3>
+ * - `distances`: HashMap<String, Integer> - persists for entire algorithm execution
+ *   * Initialized with MAX_VALUE for all vertices except source (0)
+ *   * Updated during relaxation phase; final state contains shortest distances
+ * - `visited`: HashSet<String> - tracks processed vertices to prevent reprocessing
+ *   * Grows from empty to size V (all vertices) as algorithm progresses
+ * - `priorityQueue`: PriorityQueue<Vertex> - min-heap for efficient minimum extraction
+ *   * Initially contains source vertex; drained during execution
+ *   * Comparator uses distance values; heap property maintained via sift operations
+ * 
+ * <h3>Dependency Chain</h3>
+ * - Calls: `graph.getNeighbors(vertex)` → returns List<Edge> (read-only access)
+ * - Invokes: `relaxEdge(u, v, weight)` → updates distance if shorter path found
+ * - Depends on: `Vertex` class with `compareTo()` implementing Comparable interface
+ * - Side effects: Modifies `distances` map and `predecessors` map (caller-owned)
+ * 
+ * <h3>Call Stack Structure</h3>
+ * ```
+ * calculateShortestPath(source, target)
+ *   ├─ initializeDistances() [O(V) - single pass]
+ *   ├─ priorityQueue.offer(source) [O(log V) - heap insert]
+ *   └─ while (!priorityQueue.isEmpty()) [O(V) iterations]
+ *       ├─ current = priorityQueue.poll() [O(log V) - heap extract]
+ *       ├─ if (visited.contains(current)) continue [O(1) - hash lookup]
+ *       ├─ visited.add(current) [O(1) - hash insert]
+ *       └─ for each neighbor in graph.getNeighbors(current) [O(E) total]
+ *           └─ relaxEdge(current, neighbor, weight) [O(1) - distance update]
+ * ```
+ * 
+ * <h3>System-Level Considerations</h3>
+ * - Thread safety: Not thread-safe; requires external synchronization if shared
+ * - Exception handling: NullPointerException if graph contains null vertices
+ * - Resource cleanup: PriorityQueue and collections auto-cleaned by GC after method return
+ * - Performance: Memory footprint O(V + E) for adjacency list representation
+ * 
+ * @param source Starting vertex identifier
+ * @param target Destination vertex identifier
+ * @return Shortest path as list of vertex IDs, or empty list if no path exists
+ * @throws IllegalArgumentException if source or target not in graph
+ * @throws NullPointerException if graph structure contains null references
+ */
+public List<String> calculateShortestPath(String source, String target) {
+    // Implementation with detailed inline comments for each phase
+}
+```
+
+**Required Documentation Elements:**
+- **Memory Management**: Heap/stack allocation patterns, object lifecycle, GC implications
+- **Variable Lifecycle**: Initialization, mutation points, final state, scope boundaries
+- **Dependency Chain**: Method calls, object dependencies, interface contracts, side effects
+- **Call Stack Structure**: Execution flow, recursion depth, iteration counts, complexity analysis
+- **System-Level Considerations**: Thread safety, exception propagation, resource management, performance characteristics
+
+### 1.5 외부 API 연동 주석
+외부 서비스(예: Gemini AI) 연동 코드는 다음을 포함해야 합니다:
+
+```java
+/**
+ * Gemini AI API를 호출하여 작업 사진을 분석합니다.
+ * 
+ * <h3>비즈니스 목적</h3>
+ * 현장 작업 사진을 AI가 자동 분석하여 위험 요소를 감지하고, 
+ * 작업자에게 즉시 피드백을 제공합니다. 이를 통해 사전에 위험을 차단하고 
+ * 법적 증빙 자료를 자동으로 생성합니다.
+ * 
+ * <h3>API 연동 프로세스</h3>
+ * 1. 이미지를 Base64로 인코딩하여 Gemini API 요청 형식에 맞춤
+ * 2. 시스템 프롬프트와 함께 API 호출 (산업안전 전문가 역할 부여)
+ * 3. 응답에서 위험 요소와 개선 사항 추출
+ * 4. 실패 시 Fallback 로직 실행 (수동 검토로 전환)
+ * 
+ * <h3>엔지니어링 고려사항</h3>
+ * - 타임아웃 설정: 30초 (외부 API 응답 지연 대비)
+ * - 재시도 로직: 최대 3회 (일시적 네트워크 오류 대응)
+ * - 비용 관리: 토큰 사용량 로깅 (API 비용 추적)
+ * - 에러 처리: API 실패 시에도 서비스는 정상 동작 (Fallback)
+ * 
+ * <h3>성능 최적화</h3>
+ * - 이미지 크기 제한: 10MB 이하 (API 호출 시간 단축)
+ * - 비동기 처리 고려: 대량 분석 시 Queue 활용 가능
+ * 
+ * @param imageData 분석할 이미지 바이트 배열
+ * @param filename 이미지 파일명 (로깅 목적)
+ * @return AI 분석 결과 (위험 등급, 감지된 이슈, 권장 사항)
+ * @throws AiAnalysisException API 호출 실패 시
+ */
+public AiAnalysisResponse analyzePhoto(byte[] imageData, String filename) {
+    // 구현...
+}
+```
+
+## 2. 주석 작성 가이드라인
+
+### 2.1 "왜(Why)" 중심 설명
+- **무엇을(What)**: 코드가 무엇을 하는지 설명
+- **왜(Why)**: 왜 이렇게 구현했는지 엔지니어링 결정 배경 설명
+- **어떻게(How)**: 복잡한 로직의 경우 단계별 설명
+
+```java
+// ❌ 나쁜 예: 무엇만 설명
+// 체크리스트 상태를 업데이트합니다.
+
+// ✅ 좋은 예: 왜와 함께 설명
+// 체크리스트 상태를 'APPROVED'로 업데이트합니다.
+// 중대재해처벌법에 따라 승인 이력은 감사 로그에 필수 기록되므로,
+// 상태 변경과 동시에 AuditLog 엔티티를 생성합니다.
+```
+
+### 2.2 비즈니스 맥락 포함
+법적 요구사항, 업무 프로세스, 사용자 시나리오를 설명:
+
+```java
+/**
+ * 체크리스트를 제출 상태로 변경합니다.
+ * 
+ * <h3>비즈니스 맥락</h3>
+ * 작업자가 현장에서 체크리스트를 작성한 후, '제출' 버튼을 누르면
+ * 이 메서드가 호출됩니다. 제출된 체크리스트는 감독자에게 자동으로 
+ * 배정되어 검토 프로세스가 시작됩니다.
+ * 
+ * <h3>법적 요구사항</h3>
+ * 중대재해처벌법에 따라 체크리스트 제출 시점의 타임스탬프와 
+ * 제출자 정보는 법적 증빙 자료로 사용되므로, 변경 불가능한 
+ * 감사 로그에 기록됩니다.
+ */
+public void submit() {
+    // 구현...
+}
+```
+
+### 2.3 엔지니어링 결정사항 문서화
+왜 이 기술을 선택했는지, 어떤 트레이드오프가 있었는지 설명:
+
+```java
+/**
+ * 체크리스트 목록을 페이지네이션으로 조회합니다.
+ * 
+ * <h3>엔지니어링 결정</h3>
+ * - Spring Data JPA의 Pageable 사용: 표준화된 페이지네이션
+ * - N+1 문제 방지: @EntityGraph로 연관 엔티티 한 번에 로딩
+ * - 인덱스 활용: created_at 컬럼에 인덱스 생성 (정렬 성능)
+ * 
+ * <h3>성능 고려사항</h3>
+ * - 페이지 크기 제한: 최대 50건 (메모리 사용량 제어)
+ * - 기본 정렬: 최신순 (created_at DESC) - 사용자 요구사항
+ */
+public Page<ChecklistResponse> getChecklists(Pageable pageable) {
+    // 구현...
+}
+```
+
+### 2.4 예외 상황 및 에지 케이스 설명
+예외 처리 로직의 배경을 설명:
+
+```java
+/**
+ * 체크리스트를 삭제합니다.
+ * 
+ * <h3>삭제 규칙</h3>
+ * - DRAFT 상태만 삭제 가능 (제출된 체크리스트는 법적 증빙이므로 보존)
+ * - 소프트 삭제 적용: deleted_at 필드만 업데이트 (데이터 복구 가능)
+ * 
+ * <h3>예외 상황</h3>
+ * - 이미 제출된 체크리스트: IllegalStateException 발생
+ *   (법적 증빙 보존을 위해 물리적 삭제 불가)
+ * - 다른 사용자의 체크리스트: AccessDeniedException 발생
+ *   (보안: 자신이 작성한 것만 삭제 가능)
+ */
+public void delete(Long checklistId) {
+    // 구현...
+}
+```
+
+## 3. 주석 작성 금지 사항
+
+### 3.1 자명한 코드의 주석
+코드 자체로 충분히 명확한 경우 주석 불필요:
+
+```java
+// ❌ 나쁜 예
+// 사용자 ID를 반환합니다.
+public Long getUserId() {
+    return userId;
+}
+
+// ✅ 좋은 예: 주석 없음 (메서드명으로 충분히 명확)
+public Long getUserId() {
+    return userId;
+}
+```
+
+### 3.2 코드와 불일치하는 주석
+코드가 변경되었는데 주석이 업데이트되지 않은 경우:
+
+```java
+// ❌ 나쁜 예: 주석과 코드 불일치
+// 체크리스트를 승인합니다.
+public void reject() {  // 실제로는 reject 메서드
+    // ...
+}
+
+// ✅ 좋은 예: 주석과 코드 일치
+// 체크리스트를 반려합니다.
+public void reject() {
+    // ...
+}
+```
+
+### 3.3 과도한 주석
+코드가 너무 복잡해서 주석이 많이 필요한 경우, 코드 리팩토링 고려:
+
+```java
+// ❌ 나쁜 예: 주석이 너무 많음 (코드가 복잡함을 의미)
+// 1단계: 사용자 조회
+// 2단계: 권한 확인
+// 3단계: 상태 검증
+// 4단계: 상태 변경
+// 5단계: 로그 기록
+// ... (코드가 너무 복잡함)
+
+// ✅ 좋은 예: 메서드 분리로 복잡도 감소
+public void approve(Long checklistId) {
+    Checklist checklist = findAndValidate(checklistId);
+    validateApprovalPermission();
+    checklist.approve();  // 상태 변경 로직은 Entity로 위임
+    auditLogService.recordApproval(checklistId);
+}
+```
+
+## 4. 특수 상황별 주석 가이드
+
+### 4.1 TODO/FIXME 주석
+TODO/FIXME는 반드시 이유와 우선순위를 명시:
+
+```java
+// TODO: [2024-12-20] AI 분석 실패 시 재시도 로직 추가
+// 이유: 네트워크 일시적 오류 시 자동 복구 필요
+// 우선순위: Medium (현재는 Fallback으로 동작하므로 급하지 않음)
+// 담당자: @jinsung
+
+// FIXME: [2024-12-20] N+1 쿼리 문제 해결 필요
+// 이유: 체크리스트 목록 조회 시 템플릿 정보를 매번 조회함
+// 해결방안: @EntityGraph로 한 번에 로딩
+// 우선순위: High (성능 저하 발생 중)
+```
+
+### 4.2 복잡한 정규식/수식 주석
+복잡한 수식이나 정규식은 설명과 예시 포함:
+
+```java
+/**
+ * 이메일 형식을 검증합니다.
+ * 
+ * <h3>정규식 설명</h3>
+ * - ^[a-zA-Z0-9._%+-]+: 로컬 파트 (영문, 숫자, 특수문자 허용)
+ * - @: @ 기호 필수
+ * - [a-zA-Z0-9.-]+: 도메인명 (영문, 숫자, 하이픈, 점 허용)
+ * - \.[a-zA-Z]{2,}$: 최상위 도메인 (.com, .co.kr 등)
+ * 
+ * <h3>예시</h3>
+ * - ✅ 올바른 형식: user@example.com, test.user@company.co.kr
+ * - ❌ 잘못된 형식: user@, @example.com, user@.com
+ */
+private static final String EMAIL_PATTERN = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+```
+
+### 4.3 High-Abstraction Algorithm Implementation Details
+For abstract algorithms, document system-level execution characteristics:
+
+```java
+/**
+ * Performs batch risk analysis using a sliding window approach.
+ * 
+ * <h3>Memory Layout</h3>
+ * - Window buffer: Circular array of size W (configurable, default 100)
+ *   * Pre-allocated on heap; reused across iterations (zero GC pressure)
+ *   * Memory footprint: W × sizeof(RiskEvent) ≈ 100 × 64 bytes = 6.4 KB
+ * - Event queue: LinkedBlockingQueue with capacity C (bounded to prevent OOM)
+ *   * Producer-consumer pattern; thread-safe via internal locks
+ *   * Peak memory: C × sizeof(RiskEvent) when queue full
+ * 
+ * <h3>Variable State Transitions</h3>
+ * - `windowStart`: AtomicInteger - tracks window boundary
+ *   * Initial: 0, Updated: atomically incremented on window slide
+ *   * Visibility: volatile semantics ensure cross-thread visibility
+ * - `aggregatedRisk`: ThreadLocal<RiskScore> - per-thread accumulator
+ *   * Created: on first access per thread, Cleared: thread termination
+ *   * Purpose: avoid synchronization overhead in hot path
+ * 
+ * <h3>Dependency Injection Flow</h3>
+ * ```
+ * RiskAnalysisService (constructor)
+ *   ├─ RiskRepository (JPA repository - Spring-managed)
+ *   ├─ RiskCalculator (stateless service - singleton)
+ *   └─ EventPublisher (async event bus - application-scoped)
+ * ```
+ * - RiskRepository: Lazy-initialized proxy; first query triggers DB connection
+ * - RiskCalculator: Stateless; safe for concurrent access
+ * - EventPublisher: Thread-safe; uses internal executor service
+ * 
+ * <h3>Call Graph Analysis</h3>
+ * ```
+ * analyzeBatch(events)
+ *   ├─ validateEvents(events) [O(n) - single pass validation]
+ *   ├─ partitionByWindow(events) [O(n) - grouping operation]
+ *   └─ for each window partition [O(n/W) iterations]
+ *       ├─ calculateWindowRisk(partition) [O(W) - aggregation]
+ *       │   ├─ RiskCalculator.compute(partition) [O(W log W) - sorting]
+ *       │   └─ applyRiskRules(computed) [O(R) - rule evaluation]
+ *       └─ publishRiskEvent(risk) [O(1) - async enqueue]
+ * ```
+ * Total complexity: O(n log W) where n = events, W = window size
+ * 
+ * <h3>System Resource Management</h3>
+ * - Thread pool: FixedThreadPool(size=4) for parallel window processing
+ *   * Queue capacity: 1000; rejection policy: CallerRunsPolicy
+ *   * Shutdown: graceful shutdown on application context close
+ * - Database connections: Managed by HikariCP connection pool
+ *   * Max pool size: 10; idle timeout: 30s; leak detection enabled
+ * - File handles: AutoCloseable pattern ensures cleanup on exception
+ * 
+ * @param events List of risk events to analyze (non-null, non-empty)
+ * @return Aggregated risk analysis result
+ * @throws OutOfMemoryError if window size exceeds available heap
+ */
+public RiskAnalysisResult analyzeBatch(List<RiskEvent> events) {
+    // Implementation...
+}
+```
+
+### 4.4 성능 최적화 주석
+성능 최적화를 위한 특별한 처리는 이유와 효과를 설명:
+
+```java
+/**
+ * 체크리스트 목록을 조회합니다.
+ * 
+ * <h3>성능 최적화</h3>
+ * - @EntityGraph 사용: 템플릿 정보를 한 번에 로딩 (N+1 문제 방지)
+ * - 인덱스 활용: created_at 컬럼에 인덱스 생성으로 정렬 성능 향상
+ * - 페이징: 메모리 사용량 제어 및 응답 시간 단축
+ * 
+ * <h3>성능 지표</h3>
+ * - 목표 응답 시간: < 1초 (100건 기준)
+ * - 현재 측정값: 평균 0.8초 (인덱스 적용 후)
+ */
+@EntityGraph(attributePaths = {"template"})
+public Page<Checklist> findAll(Pageable pageable) {
+    // 구현...
+}
+```
+
+## 5. 주석 검증 체크리스트
+
+코드 리뷰 시 다음 항목을 확인하세요:
+
+- [ ] 모든 public 클래스/메서드에 JavaDoc 주석이 있는가?
+- [ ] 비즈니스 맥락(법적 요구사항, 업무 프로세스)이 설명되어 있는가?
+- [ ] 엔지니어링 결정사항(왜 이렇게 구현했는지)이 문서화되어 있는가?
+- [ ] 복잡한 알고리즘/로직의 단계별 설명이 있는가?
+- [ ] 예외 상황 및 에지 케이스가 설명되어 있는가?
+- [ ] 외부 API 연동 시 프로세스와 에러 처리가 설명되어 있는가?
+- [ ] 추상성이 높은 알고리즘의 경우 메모리, 변수, 의존성, 호출 구조가 문서화되어 있는가?
+- [ ] 주석과 코드가 일치하는가?
+- [ ] 비개발자가 읽어도 이해할 수 있는가?
+
+## 6. 예시: 완전한 주석 작성 예제
+
+```java
+/**
+ * 체크리스트 검토 및 승인 워크플로우를 처리하는 서비스 클래스입니다.
+ * 
+ * <h3>비즈니스 맥락</h3>
+ * 중대재해처벌법에 따라 현장 안전 점검은 3단계 승인 프로세스를 거쳐야 합니다:
+ * 1) 작업자 작성 및 제출, 2) 감독자 검토 및 승인, 3) 안전관리자 최종 승인.
+ * 이 서비스는 각 단계의 상태 전이와 승인/반려 로직을 중앙에서 관리합니다.
+ * 
+ * <h3>주요 책임</h3>
+ * - 제출된 체크리스트를 감독자에게 자동 배정
+ * - 감독자/안전관리자의 승인/반려 처리 및 상태 업데이트
+ * - 반려 시 작업자에게 알림 발송 (즉시 조치 가능하도록)
+ * - 모든 승인/반려 이력을 감사 로그에 기록 (법적 증빙 목적)
+ * 
+ * <h3>엔지니어링 결정사항</h3>
+ * - 상태 전이는 Entity 내부 메서드로 캡슐화: 무결성 보장 및 테스트 용이성
+ * - 트랜잭션 경계는 Service 레이어에서 관리: 데이터 일관성 보장
+ * - 알림 발송은 비동기 처리: API 응답 시간 단축 (사용자 경험 개선)
+ * - 낙관적 잠금(@Version) 사용: 동시 승인 시도 방지
+ * 
+ * @author Safety Road Team
+ * @since 1.0.0
+ * @see Checklist 엔티티의 상태 전이 메서드들
+ * @see ReviewRepository 승인 이력 조회를 위한 Repository
+ */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+@Slf4j
+public class ReviewService {
+    
+    private final ChecklistRepository checklistRepository;
+    private final ReviewRepository reviewRepository;
+    private final NotificationService notificationService;
+    private final AuditLogService auditLogService;
+    
+    /**
+     * 체크리스트를 감독자 승인 상태로 전이시킵니다.
+     * 
+     * <h3>비즈니스 프로세스</h3>
+     * 1. 체크리스트 존재 여부 및 현재 상태 검증 (SUBMITTED 상태만 승인 가능)
+     * 2. 승인자 권한 확인 (ROLE_SUPERVISOR 또는 ROLE_SAFETY_MANAGER만 승인 가능)
+     * 3. 체크리스트 상태를 'APPROVED_SUPERVISOR'로 변경 (Entity 메서드 호출)
+     * 4. 승인 이력을 Review 엔티티에 기록 (누가, 언제 승인했는지)
+     * 5. 다음 승인자(안전관리자)에게 알림 발송 (비동기)
+     * 6. 승인 이력을 감사 로그에 기록 (법적 증빙)
+     * 
+     * <h3>엔지니어링 고려사항</h3>
+     * - 트랜잭션 내에서 상태 변경과 알림 발송을 처리하여 일관성 보장
+     * - 알림 실패 시에도 승인은 완료되도록 설계 (비즈니스 로직 우선)
+     * - 동시성 제어: 낙관적 잠금(@Version)으로 중복 승인 방지
+     * - 예외 발생 시 트랜잭션 롤백으로 데이터 무결성 보장
+     * 
+     * <h3>예외 상황</h3>
+     * - 체크리스트가 존재하지 않는 경우: ChecklistNotFoundException
+     * - 상태가 'SUBMITTED'가 아닌 경우: IllegalStateException
+     *   (이미 승인되었거나 반려된 체크리스트는 재승인 불가)
+     * - 승인자 권한이 없는 경우: AccessDeniedException
+     *   (작업자는 자신이 작성한 체크리스트를 승인할 수 없음)
+     * 
+     * @param checklistId 승인할 체크리스트 ID
+     * @param approverId 승인자 사용자 ID (SecurityContext에서 자동 주입)
+     * @return 승인 완료된 체크리스트 응답 DTO
+     * @throws ChecklistNotFoundException 체크리스트가 존재하지 않을 때
+     * @throws IllegalStateException 상태 전이 규칙 위반 시
+     * @throws AccessDeniedException 승인 권한이 없을 때
+     */
+    @Transactional
+    public ChecklistResponse approveChecklist(Long checklistId, Long approverId) {
+        log.info("[체크리스트 승인 요청] checklistId={}, approverId={}", checklistId, approverId);
+        
+        // 1단계: 체크리스트 조회 및 검증
+        Checklist checklist = checklistRepository.findById(checklistId)
+                .orElseThrow(() -> new ChecklistNotFoundException(checklistId));
+        
+        // 2단계: 상태 전이 (Entity 내부 메서드로 캡슐화)
+        // 이 메서드 내부에서 상태 검증과 권한 확인이 수행됨
+        checklist.approve(approverId);
+        
+        // 3단계: 승인 이력 기록
+        Review review = Review.builder()
+                .checklist(checklist)
+                .reviewerId(approverId)
+                .status(ReviewStatus.APPROVED)
+                .build();
+        reviewRepository.save(review);
+        
+        // 4단계: 다음 승인자에게 알림 발송 (비동기)
+        notificationService.sendApprovalNotification(checklist);
+        
+        // 5단계: 감사 로그 기록 (법적 증빙)
+        auditLogService.recordApproval(checklistId, approverId);
+        
+        log.info("[체크리스트 승인 완료] checklistId={}, newStatus={}", 
+                checklistId, checklist.getStatus());
+        
+        return ChecklistResponse.from(checklist);
+    }
+}
+```
+
+## See also:
+- [301-spring-boot-java-rules.cursorrules](301-spring-boot-java-rules.cursorrules) for Java coding standards
+- [003-development-guidelines.cursorrules](003-development-guidelines.cursorrules) for development guidelines
+- [001-project-overview.cursorrules](001-project-overview.cursorrules) for business context

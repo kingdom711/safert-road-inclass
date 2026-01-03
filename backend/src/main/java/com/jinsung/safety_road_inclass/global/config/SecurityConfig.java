@@ -14,6 +14,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 /**
  * Spring Security Configuration
@@ -34,6 +39,9 @@ public class SecurityConfig {
             // CSRF 비활성화 (JWT 사용)
             .csrf(AbstractHttpConfigurer::disable)
             
+            // CORS 설정
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            
             // 세션 관리: Stateless (JWT 사용)
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -48,7 +56,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints (인증 불필요)
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/api/v1/health").permitAll()
+                .requestMatchers("/api/v1/health/**").permitAll()  // health와 health/ping 모두 허용
                 .requestMatchers("/api/v1/ai/**").permitAll()  // AI 분석 API (레거시)
                 .requestMatchers("/api/v1/business-plan/**").permitAll()  // GEMS AI API (프론트엔드 연동)
                 .requestMatchers("/h2-console/**").permitAll()
@@ -67,6 +75,42 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
+    }
+
+    /**
+     * CORS 설정
+     * 프론트엔드 개발 서버에서의 요청을 허용합니다.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // 허용할 Origin (프론트엔드 개발 서버)
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",  // Vite 기본 포트
+            "http://localhost:3002",  // Vite 추가 포트 (포트 충돌 시)
+            "http://localhost:5173",  // Vite 대체 포트
+            "http://localhost:5174"   // Vite 추가 포트
+        ));
+        
+        // 허용할 HTTP 메서드
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+        
+        // 허용할 헤더
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // 인증 정보 포함 허용 (JWT 토큰 전송을 위해 필요)
+        configuration.setAllowCredentials(true);
+        
+        // Preflight 요청 캐시 시간 (초)
+        configuration.setMaxAge(3600L);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+        
+        return source;
     }
 
     @Bean

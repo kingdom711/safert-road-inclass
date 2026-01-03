@@ -35,10 +35,20 @@ public class AiController {
         description = "체크리스트 내용을 Gemini AI가 분석하여 위험 요인과 개선 대책을 제안합니다."
     )
     @PostMapping("/analyze")
-    public ApiResponse<AiAnalysisResponse> analyzeText(@Valid @RequestBody AiAnalysisRequest request) {
-        log.info("AI 텍스트 분석 요청 수신: checklistId={}", request.getChecklistId());
+    public ApiResponse<AiAnalysisResponse> analyzeText(
+            @Valid @RequestBody AiAnalysisRequest request) {
         
+        log.info("AI 텍스트 분석 요청 수신: checklistId={}, contentLength={}", 
+                request.getChecklistId(), 
+                request.getContent() != null ? request.getContent().length() : 0);
+        
+        // DTO 검증은 @Valid로 자동 처리됨
+        // Service 레이어로 DTO 전달
         AiAnalysisResponse response = aiAnalysisService.analyzeText(request);
+        
+        log.info("AI 텍스트 분석 완료: checklistId={}, riskLevel={}", 
+                request.getChecklistId(), 
+                response.getRiskLevel());
         
         return ApiResponse.success(response);
     }

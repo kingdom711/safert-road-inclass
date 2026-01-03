@@ -1,5 +1,7 @@
 package com.jinsung.safety_road_inclass.domain.ai.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -16,11 +18,13 @@ public class BusinessPlanRequest {
     /**
      * 입력 유형: TEXT, PHOTO, BOTH
      */
+    @NotBlank(message = "inputType은 필수입니다.")
     private String inputType;
     
     /**
      * 분석할 텍스트 내용
      */
+    @NotBlank(message = "inputText는 필수입니다.")
     private String inputText;
     
     /**
@@ -31,6 +35,7 @@ public class BusinessPlanRequest {
     /**
      * 컨텍스트 정보
      */
+    @Valid
     private Context context;
     
     @Getter

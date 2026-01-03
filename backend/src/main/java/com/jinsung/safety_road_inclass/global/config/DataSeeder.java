@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("dev")
 @RequiredArgsConstructor
+@Order(1000) // 다른 초기화 작업 이후에 실행되도록
 public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
@@ -33,15 +35,27 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (userRepository.count() > 0) {
-            log.info("데이터가 이미 존재합니다. 시딩을 건너뜁니다.");
-            return;
-        }
+        try {
+            // 테이블이 생성되었는지 확인
+            long userCount = userRepository.count();
+            if (userCount > 0) {
+                log.info("데이터가 이미 존재합니다. 시딩을 건너뜁니다.");
+                return;
+            }
 
-        log.info("=== 초기 데이터 시딩 시작 ===");
-        seedUsers();
-        seedTemplates();
-        log.info("=== 초기 데이터 시딩 완료 ===");
+            log.info("=== 초기 데이터 시딩 시작 ===");
+            seedUsers();
+            seedTemplates();
+            log.info("=== 초기 데이터 시딩 완료 ===");
+        } catch (Exception e) {
+            log.error("데이터 시딩 중 오류 발생: {}", e.getMessage(), e);
+            // 테이블이 아직 생성되지 않은 경우 무시하고 계속 진행
+            if (e.getMessage() != null && e.getMessage().contains("Table") && e.getMessage().contains("not found")) {
+                log.warn("테이블이 아직 생성되지 않았습니다. 다음 실행 시 시딩됩니다.");
+            } else {
+                throw e; // 다른 오류는 다시 던짐
+            }
+        }
     }
 
     private void seedUsers() {
