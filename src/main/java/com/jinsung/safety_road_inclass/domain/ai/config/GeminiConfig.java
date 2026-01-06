@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * Gemini API 설정
@@ -17,22 +18,23 @@ import org.springframework.web.client.RestTemplate;
 @Getter
 @Setter
 public class GeminiConfig {
-    
+
     /**
      * Gemini API Key
      */
+    @Value("${custom.gemini.key}")
     private String key;
-    
+
     /**
      * Gemini API URL
      */
     private String url;
-    
+
     /**
      * API 요청 타임아웃 (ms)
      */
     private int timeout = 30000;
-    
+
     /**
      * Gemini API 호출용 RestTemplate Bean
      */
@@ -43,12 +45,11 @@ public class GeminiConfig {
         factory.setReadTimeout(timeout);
         return new RestTemplate(factory);
     }
-    
+
     /**
      * API Key가 포함된 전체 URL 반환
      */
     public String getFullUrl() {
-        return url + "?key=" + key;
+        return url + "?key=" + (key != null ? key.trim() : "");
     }
 }
-

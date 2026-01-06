@@ -57,6 +57,9 @@ dependencies {
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-mysql'
 
+	// ULID Creator library (lexicographically sortable unique identifier)
+	implementation 'com.github.f4b6a3:ulid-creator:5.2.3'
+
 	// Spring AI - Google Gemini
 	// Spring AI 1.0.0 BOM을 통해 버전 관리
 	// Spring AI 1.0.0에서는 spring-ai-vertex-ai-gemini 사용
