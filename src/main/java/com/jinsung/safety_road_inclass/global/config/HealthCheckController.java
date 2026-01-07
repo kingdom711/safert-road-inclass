@@ -66,5 +66,19 @@ public class HealthCheckController {
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    /**
+     * CloudType 헬스체크용 루트 경로 엔드포인트
+     * CloudType이 루트 경로(/)를 헬스체크로 사용합니다.
+     */
+    @GetMapping("/")
+    public ResponseEntity<ApiResponse<HealthResponse.PingResponse>> root() {
+        HealthResponse.PingResponse response = HealthResponse.PingResponse.builder()
+                .status("UP")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 }
 
