@@ -25,6 +25,9 @@ import java.io.IOException;
  * 
  * ULID(Universally Unique Lexicographically Sortable Identifier)는
  * 시간 정보를 포함하므로 로그 정렬에 유리합니다.
+ * 
+ * API 메트릭 로깅:
+ * - METRIC:API_CALL 형식으로 요청/응답 시간을 기록합니다.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -50,6 +53,9 @@ public class LoggingFilter extends OncePerRequestFilter {
             log.debug("Using Request ID from header: {}", requestId);
         }
 
+        // API 호출 시간 측정 시작
+        long startTime = System.currentTimeMillis();
+
         try {
             // MDC에 requestId 저장 - 모든 로그에 자동으로 포함됨
             MDC.put(MDC_REQUEST_ID_KEY, requestId);
@@ -61,6 +67,20 @@ public class LoggingFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } finally {
+            // API 응답 시간 계산
+            long duration = System.currentTimeMillis() - startTime;
+
+            // API 엔드포인트 경로 (/api/로 시작하는 경우에만 메트릭 로깅)
+            String path = request.getRequestURI();
+            if (path != null && path.startsWith("/api")) {
+                log.info("METRIC:API_CALL requestId={} method={} path={} status={} durationMs={}",
+                        requestId,
+                        request.getMethod(),
+                        path,
+                        response.getStatus(),
+                        duration);
+            }
+
             // 요청 처리 완료 후 반드시 MDC 정리
             MDC.clear();
         }
