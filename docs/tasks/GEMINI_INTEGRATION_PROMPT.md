@@ -1,41 +1,103 @@
-# GEMS AI - Gemini API 연동 프롬프트
+# GEMS AI - Gemini API 연동 가이드
 
-> **용도**: 백엔드 개발자가 Cursor AI에서 사용할 프롬프트입니다.
+> **문서 상태**: ✅ 연동 완료  
+> **최종 업데이트**: 2026-01-08  
 > **대상 기능**: RiskSolutionPage의 "안전 지능 시스템" AI 분석 기능
 
 ---
 
-## 📋 사용 방법
+## 📋 목차
 
-1. 백엔드 프로젝트를 Cursor에서 열기
-2. 아래 프롬프트를 Cursor Chat에 붙여넣기
-3. AI가 생성한 코드를 검토 후 적용
+1. [시스템 개요](#1-시스템-개요)
+2. [아키텍처 흐름](#2-아키텍처-흐름)
+3. [API 인터페이스](#3-api-인터페이스)
+4. [프론트엔드 구현](#4-프론트엔드-구현)
+5. [백엔드 구현](#5-백엔드-구현)
+6. [Gemini API 연동](#6-gemini-api-연동)
+7. [설정 및 환경변수](#7-설정-및-환경변수)
+8. [테스트 방법](#8-테스트-방법)
+9. [트러블슈팅](#9-트러블슈팅)
 
 ---
 
-## 🤖 Cursor 프롬프트
+## 1. 시스템 개요
 
-아래 내용을 복사하여 백엔드 Cursor에 붙여넣으세요:
+### 기능 설명
+
+사용자가 RiskSolutionPage에서 위험 상황을 텍스트로 입력하면, AI가 분석하여 다음 정보를 반환합니다:
+
+- **위험 요인 (riskFactor)**: 핵심 위험 요인 한 문장
+- **위험 수준 (riskLevel)**: CRITICAL, HIGH, MEDIUM, LOW
+- **조치 방안 (remediationSteps)**: 3~5개의 단계별 지침
+- **참조 코드 (referenceCode)**: 관련 KOSHA 가이드 코드
+
+### 사용자 인터페이스
 
 ```
-### 1. 배경 및 미션
-아래 [기존 소스코드]는 프론트엔드(RiskSolutionPage)에서 위험 상황 텍스트를 입력받아 
-AI가 위험 요인 분석 및 조치 방안을 반환하는 Spring Boot 백엔드 로직입니다.
-
-현재 구현된 FE-BE 간의 요청(Request) 및 응답(Response) 포맷을 '절대적으로 유지'한 상태에서, 
-내부 Mock 로직을 **Google Gemini API 직접 호출**로 대체해주세요.
+프론트엔드 RiskSolutionPage
+├── textarea (위험 상황 입력)
+│   └── placeholder: "건설 현장 2층 비계 작업 중 안전난간이 심하게 흔들리고 있습니다..."
+├── "🔍 AI 솔루션 요청" 버튼
+└── 결과 표시 영역 (GEMSResultCard)
+```
 
 ---
 
-### 2. 프론트엔드 API 인터페이스 (변경 불가)
+## 2. 아키텍처 흐름
 
-#### 엔드포인트
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           프론트엔드 (React)                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│  RiskSolutionPage.jsx                                                    │
+│       │                                                                  │
+│       ▼                                                                  │
+│  geminiService.js (래퍼)                                                 │
+│       │                                                                  │
+│       ▼                                                                  │
+│  gemsApi.js                                                              │
+│       │ POST /api/v1/business-plan/generate                              │
+└───────┼─────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           백엔드 (Spring Boot)                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│  BusinessPlanController.java                                             │
+│       │ @PostMapping("/generate")                                        │
+│       ▼                                                                  │
+│  BusinessPlanService.java                                                │
+│       │ generate(request)                                                │
+│       ▼                                                                  │
+│  GeminiService.java                                                      │
+│       │ analyzeRisk()                                                    │
+│       ▼                                                                  │
+│  RestTemplate → Google Gemini API                                        │
+└───────┼─────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      Google Gemini API                                   │
+│  https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash│
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. API 인터페이스
+
+### 엔드포인트
+
+```
 POST /api/v1/business-plan/generate
+```
 
-#### Request Body
+### Request Body
+
+```json
 {
   "inputType": "TEXT",
-  "inputText": "건설 현장 2층 비계 작업 중 안전난간이 심하게 흔들리고 있습니다...",
+  "inputText": "건설 현장 2층 비계 작업 중 안전난간이 심하게 흔들리고 있습니다. 작업자 3명이 해당 구역에서 철골 용접 작업을 진행 중이며, 안전대 체결 상태가 불량하여 추락 사고 위험이 매우 높은 상황입니다.",
   "photoId": null,
   "context": {
     "workType": "construction",
@@ -44,243 +106,402 @@ POST /api/v1/business-plan/generate
     "currentTask": "철골 용접 작업"
   }
 }
+```
 
-#### Response Body (이 구조 반드시 유지)
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `inputType` | String | ✅ | `TEXT`, `PHOTO`, `BOTH` 중 하나 |
+| `inputText` | String | ✅ | 위험 상황 설명 텍스트 |
+| `photoId` | String | ❌ | 업로드된 사진 ID (이미지 분석 시) |
+| `context` | Object | ❌ | 추가 컨텍스트 정보 |
+| `context.workType` | String | ❌ | 작업 유형 |
+| `context.location` | String | ❌ | 작업 위치 |
+| `context.workerCount` | Integer | ❌ | 작업자 수 |
+| `context.currentTask` | String | ❌ | 현재 수행 작업 |
+
+### Response Body
+
+```json
 {
   "success": true,
   "data": {
-    "riskFactor": "고소 작업 중 안전대 미체결",
+    "riskFactor": "비계 안전난간 불량 및 안전대 미체결로 인한 추락 위험",
     "remediationSteps": [
-      "즉시 작업을 중단하고 안전한 장소로 이동하십시오.",
-      "안전대 및 부속품의 상태를 점검하십시오.",
-      "안전대 체결 후 2인 1조로 작업을 재개하십시오."
+      "즉시 해당 구역 작업을 중단하고 작업자를 대피시키십시오.",
+      "모든 작업자의 안전대 체결 상태를 확인하고 재체결하십시오.",
+      "비계 안전난간을 점검하고 불량 부위를 즉시 보수하십시오.",
+      "관리감독자 입회 하에 비계 전체 안전점검을 실시하십시오.",
+      "점검 완료 후 작업 재개 전 TBM을 실시하십시오."
     ],
-    "referenceCode": "KOSHA-G-2023-01",
+    "referenceCode": "KOSHA-C-2023-08",
     "actionRecordId": "550e8400-e29b-41d4-a716-446655440000",
-    "riskLevel": "HIGH",
-    "analysisId": "analysis-2024-12-17-001",
-    "analyzedAt": "2024-12-17T10:30:00.000Z"
-  }
+    "riskLevel": "CRITICAL",
+    "analysisId": "analysis-2026-01-08-abc12345",
+    "analyzedAt": "2026-01-08T10:30:00.000Z"
+  },
+  "error": null
 }
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `riskFactor` | String | 핵심 위험 요인 (한 문장) |
+| `riskLevel` | String | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
+| `remediationSteps` | String[] | 조치 방안 배열 (3~5개) |
+| `referenceCode` | String | KOSHA 가이드 코드 |
+| `actionRecordId` | String | 조치 기록 UUID |
+| `analysisId` | String | 분석 ID |
+| `analyzedAt` | String | 분석 시각 (ISO 8601) |
 
 ---
 
-### 3. 상세 구현 요구사항
+## 4. 프론트엔드 구현
 
-- **인터페이스 준수**: 
-    - 기존 `BusinessPlanController`의 엔드포인트(`/api/v1/business-plan/generate`) 유지
-    - `BusinessPlanRequest`, `BusinessPlanResponse` DTO 필드 구조 그대로 유지
+### 파일 구조
+
+```
+Life-game/safety-quest-game/src/
+├── pages/
+│   └── RiskSolutionPage.jsx    # 메인 페이지
+├── components/
+│   ├── RiskSolutionModal.jsx   # 모달 컴포넌트
+│   └── GEMSResultCard.jsx      # 결과 표시 컴포넌트
+├── api/
+│   └── gemsApi.js              # API 클라이언트
+├── utils/
+│   └── geminiService.js        # 서비스 래퍼
+└── config/
+    └── environment.js          # 환경 설정
+```
+
+### 핵심 코드: RiskSolutionPage.jsx
+
+```jsx
+const handleSubmit = async () => {
+    // 입력이 비어있으면 placeholder 텍스트 사용 (디버깅 모드)
+    const textToSubmit = inputText.trim() || DEFAULT_RISK_TEXT;
+
+    setStep('analyzing');
+    setError(null);
+
+    try {
+        // geminiService → gemsApi → POST /api/v1/business-plan/generate
+        const result = await geminiService.analyzeRisk(textToSubmit);
+        
+        setAnalysisResult(result);
+        setStep('result');
+    } catch (err) {
+        setError('AI 분석 중 오류가 발생했습니다.');
+        setStep('input');
+    }
+};
+```
+
+### 핵심 코드: gemsApi.js
+
+```javascript
+analyzeRisk: async (data) => {
+    // Mock 모드 체크
+    if (config.USE_MOCK) {
+        return getMockResponse();
+    }
     
-- **Gemini API 직접 호출**: 
-    - `RestTemplate` 또는 `WebClient`를 사용하여 Google Gemini API 직접 호출
-    - Gemini API 엔드포인트: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent`
-    - API Key: `AIzaSyBkBFQVLIpDmpDu0aRsT8h-N0QuV1jsqHE`
-    - API Key는 `application.properties`에서 `gemini.api.key`로 관리
+    const requestBody = {
+        inputType: data.photoId ? 'PHOTO' : 'TEXT',
+        inputText: data.inputText,
+        photoId: data.photoId || null,
+        context: data.context || {}
+    };
     
-- **시스템 프롬프트 (안전 전문가 역할 부여)**:
-
-당신은 산업안전보건 전문가입니다. 
-사용자가 설명하는 현장 위험 상황을 분석하고, 다음 형식으로 응답하세요:
-
-1. riskFactor: 핵심 위험 요인 (한 문장)
-2. riskLevel: 위험 등급 (CRITICAL, HIGH, MEDIUM, LOW 중 하나)
-3. remediationSteps: 구체적인 조치 방안 (3~5개의 단계별 지침, 배열 형태)
-4. referenceCode: 관련 KOSHA 가이드 코드 (아래 목록에서 선택)
-
-KOSHA 코드 목록:
-- KOSHA-G-2023-01: 고소작업, 안전대 관련
-- KOSHA-M-2023-05: 화기작업, 화재 예방
-- KOSHA-P-2023-12: 보호구, 개인보호구 착용
-- KOSHA-C-2023-08: 가설구조, 비계 및 거푸집
-- KOSHA-S-2023-03: 밀폐공간, 밀폐공간 작업
-- KOSHA-E-2023-07: 전기작업, 전기 안전
-- KOSHA-L-2023-11: 양중작업, 크레인 및 양중기
-- KOSHA-F-2023-04: 화재예방, 용접 화재 감시
-
-반드시 위 4가지 필드만 JSON 형식으로 응답하세요.
-
-- **Gemini 응답 파싱**:
-    - Gemini의 텍스트 응답에서 JSON을 추출하여 DTO 필드에 매핑
-    - 파싱 실패 시 기본 응답 반환 (Fallback 처리)
-
-- **토큰 측정 및 로깅**:
-    - Gemini 응답의 `usageMetadata`에서 토큰 정보 추출
-    - `[Gemini Usage Log] Input: {promptTokens}, Output: {candidatesTokens}, Total: {totalTokens}` 형식으로 로그
+    // 실제 API 호출
+    const response = await apiClient.post('/business-plan/generate', requestBody);
     
-- **응답 확장 (Optional)**:
-    - 기존 Response 구조 유지하면서 `usage` 객체를 추가할 수 있음:
-{
-  "success": true,
-  "data": { ... },
-  "usage": {
-    "promptTokens": 150,
-    "candidatesTokens": 200,
-    "totalTokens": 350
-  }
+    // 응답 정규화
+    return {
+        success: true,
+        riskFactor: response.riskFactor,
+        remediationSteps: response.remediationSteps,
+        referenceCode: response.referenceCode,
+        riskLevel: response.riskLevel,
+        // ...
+    };
 }
+```
+
+### 환경 설정 (environment.js)
+
+```javascript
+const config = {
+    API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+    USE_MOCK: import.meta.env.VITE_USE_MOCK === 'true',
+    API_VERSION: 'v1',
+};
+```
 
 ---
 
-### 4. [기존 소스코드]
+## 5. 백엔드 구현
 
-#### BusinessPlanController.java
+### 파일 구조
+
+```
+safert-road-inclass/src/main/java/com/jinsung/safety_road_inclass/
+└── domain/
+    └── ai/
+        ├── controller/
+        │   └── BusinessPlanController.java
+        ├── dto/
+        │   ├── BusinessPlanRequest.java
+        │   ├── BusinessPlanResponse.java
+        │   └── gemini/
+        │       ├── GeminiRequest.java
+        │       ├── GeminiResponse.java
+        │       └── GeminiAnalysisResult.java
+        ├── service/
+        │   ├── BusinessPlanService.java
+        │   └── GeminiService.java
+        └── config/
+            └── GeminiConfig.java
+```
+
+### BusinessPlanController.java
+
+```java
 @RestController
 @RequestMapping("/api/v1/business-plan")
-@RequiredArgsConstructor
 public class BusinessPlanController {
     
     private final BusinessPlanService businessPlanService;
     
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<BusinessPlanResponse>> generate(
-            @RequestBody BusinessPlanRequest request) {
+            @RequestBody @Valid BusinessPlanRequest request) {
         
-        BusinessPlanResponse response = businessPlanService.analyzeRisk(request);
+        BusinessPlanResponse response = businessPlanService.generate(request, requestId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
+```
 
-#### BusinessPlanRequest.java
-@Data
-public class BusinessPlanRequest {
-    private String inputType;  // TEXT, PHOTO, BOTH
-    private String inputText;
-    private String photoId;
-    private Map<String, Object> context;
-}
+### BusinessPlanService.java
 
-#### BusinessPlanResponse.java
-@Data
-@Builder
-public class BusinessPlanResponse {
-    private String riskFactor;
-    private List<String> remediationSteps;
-    private String referenceCode;
-    private String actionRecordId;
-    private String riskLevel;
-    private String analysisId;
-    private LocalDateTime analyzedAt;
-}
-
-#### BusinessPlanService.java (현재 Mock 구현)
+```java
 @Service
-@RequiredArgsConstructor
 public class BusinessPlanService {
     
-    public BusinessPlanResponse analyzeRisk(BusinessPlanRequest request) {
-        // TODO: 현재 Mock 로직을 Gemini API 호출로 대체
+    private final GeminiService geminiService;
+    
+    public BusinessPlanResponse generate(BusinessPlanRequest request, String requestId) {
+        // Context 정보 추출
+        String workType = request.getContext() != null ? request.getContext().getWorkType() : null;
+        // ...
+        
+        // Gemini API 호출
+        GeminiAnalysisResult analysisResult = geminiService.analyzeRisk(
+            request.getInputText(),
+            workType, location, workerCount, currentTask
+        );
+        
+        // Response 생성
         return BusinessPlanResponse.builder()
-            .riskFactor("고소 작업 중 안전대 미체결")
-            .remediationSteps(List.of(
-                "즉시 작업을 중단하고 안전한 장소로 이동하십시오.",
-                "안전대 및 부속품의 상태를 점검하십시오."
-            ))
-            .referenceCode("KOSHA-G-2023-01")
-            .riskLevel("HIGH")
-            .analysisId("analysis-" + System.currentTimeMillis())
+            .riskFactor(analysisResult.getRiskFactor())
+            .remediationSteps(analysisResult.getRemediationSteps())
+            .referenceCode(analysisResult.getReferenceCode())
+            .riskLevel(analysisResult.getRiskLevel())
+            .analysisId("analysis-" + LocalDateTime.now().format(...))
             .analyzedAt(LocalDateTime.now())
             .build();
     }
 }
-
----
-
-### 5. 출력 형식
-
-다음 파일들을 작성해주세요:
-
-1. **GeminiService.java** - Gemini API 호출 및 응답 파싱 담당
-2. **GeminiConfig.java** - API Key 및 설정 관리
-3. **GeminiRequest.java / GeminiResponse.java** - Gemini API용 DTO
-4. **BusinessPlanService.java** - Gemini 연동으로 수정된 전체 코드
-5. **application.properties 추가 항목**:
-   - gemini.api.key=AIzaSyBkBFQVLIpDmpDu0aRsT8h-N0QuV1jsqHE
-   - gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
-   - gemini.api.timeout=30000
 ```
 
 ---
 
-## 📊 핵심 변경 사항 요약
+## 6. Gemini API 연동
 
-| 항목 | 원본 예시 | 프로젝트 맞춤 수정 |
-|------|----------|------------------|
-| Controller | `{{Controller명}}` | `BusinessPlanController` |
-| 엔드포인트 | `/api/gems/analyze-risk` | `/api/v1/business-plan/generate` |
-| Request DTO | `GemsAnalysisRequest` | `BusinessPlanRequest` |
-| Response DTO | `GemsAnalysisResponse` | `BusinessPlanResponse` |
-| AI 엔진 | Spring AI ChatModel | Gemini API 직접 호출 (RestTemplate/WebClient) |
-| 도메인 | 문서 보강 | 산업안전 위험 분석 |
-| 시스템 프롬프트 | 문서 편집자 | 산업안전보건 전문가 |
+### GeminiService.java 핵심 로직
 
----
+```java
+@Service
+public class GeminiService {
+    
+    // 산업안전보건 전문가 시스템 프롬프트
+    private static final String SYSTEM_PROMPT = """
+        당신은 산업안전보건 전문가입니다.
+        사용자가 설명하는 현장 위험 상황을 분석하고, 다음 형식으로 응답하세요:
 
-## 🔗 관련 파일 참조
+        1. riskFactor: 핵심 위험 요인 (한 문장)
+        2. riskLevel: 위험 등급 (CRITICAL, HIGH, MEDIUM, LOW 중 하나)
+        3. remediationSteps: 구체적인 조치 방안 (3~5개의 단계별 지침, 배열 형태)
+        4. referenceCode: 관련 KOSHA 가이드 코드 (아래 목록에서 선택)
 
-### 프론트엔드 (현재 프로젝트)
-- API 클라이언트: `src/api/gemsApi.js`
-- 페이지 컴포넌트: `src/pages/RiskSolutionPage.jsx`
-- 서비스 래퍼: `src/utils/geminiService.js`
+        KOSHA 코드 목록:
+        - KOSHA-G-2023-01: 고소작업, 안전대 관련
+        - KOSHA-M-2023-05: 화기작업, 화재 예방
+        - KOSHA-P-2023-12: 보호구, 개인보호구 착용
+        - KOSHA-C-2023-08: 가설구조, 비계 및 거푸집
+        - KOSHA-S-2023-03: 밀폐공간, 밀폐공간 작업
+        - KOSHA-E-2023-07: 전기작업, 전기 안전
+        - KOSHA-L-2023-11: 양중작업, 크레인 및 양중기
+        - KOSHA-F-2023-04: 화재예방, 용접 화재 감시
 
-### 백엔드 프로젝트 구조 (예상)
-```
-backend/src/main/java/com/jinsung/safety_road_inclass/
-├── domain/
-│   └── ai/
-│       ├── controller/
-│       │   └── BusinessPlanController.java
-│       ├── dto/
-│       │   ├── BusinessPlanRequest.java
-│       │   └── BusinessPlanResponse.java
-│       └── service/
-│           ├── BusinessPlanService.java
-│           ├── GeminiService.java        # 신규
-│           └── GeminiConfig.java         # 신규
-```
-
----
-
-## ⚙️ application.properties 추가 설정
-
-```properties
-# Gemini API Configuration
-gemini.api.key=AIzaSyBkBFQVLIpDmpDu0aRsT8h-N0QuV1jsqHE
-gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
-gemini.api.timeout=30000
-```
-
-> ⚠️ **보안 주의**: 프로덕션 환경에서는 API Key를 환경변수로 관리하세요.
-> `gemini.api.key=${GEMINI_API_KEY}`
-
----
-
-## 🧪 테스트 시나리오
-
-### 입력 예시
-```
-건설 현장 2층 비계 작업 중 안전난간이 심하게 흔들리고 있습니다. 
-작업자 3명이 해당 구역에서 철골 용접 작업을 진행 중이며, 
-안전대 체결 상태가 불량하여 추락 사고 위험이 매우 높은 상황입니다.
-```
-
-### 예상 출력
-```json
-{
-  "riskFactor": "비계 안전난간 불량 및 안전대 미체결로 인한 추락 위험",
-  "riskLevel": "CRITICAL",
-  "remediationSteps": [
-    "즉시 해당 구역 작업을 중단하고 작업자를 대피시키십시오.",
-    "모든 작업자의 안전대 체결 상태를 확인하고 재체결하십시오.",
-    "비계 안전난간을 점검하고 불량 부위를 즉시 보수하십시오.",
-    "관리감독자 입회 하에 비계 전체 안전점검을 실시하십시오.",
-    "점검 완료 후 작업 재개 전 TBM(Tool Box Meeting)을 실시하십시오."
-  ],
-  "referenceCode": "KOSHA-C-2023-08"
+        반드시 위 4가지 필드만 JSON 형식으로 응답하세요.
+        """;
+    
+    public GeminiAnalysisResult analyzeRisk(String situationText, ...) {
+        String userPrompt = buildUserPrompt(situationText, ...);
+        
+        try {
+            GeminiResponse response = callGeminiApi(userPrompt);
+            return parseGeminiResponse(response);
+        } catch (Exception e) {
+            return createFallbackResponse(situationText);
+        }
+    }
 }
 ```
 
+### KOSHA 코드 목록
+
+| 코드 | 분류 | 설명 |
+|------|------|------|
+| KOSHA-G-2023-01 | 고소작업 | 안전대 관련 |
+| KOSHA-M-2023-05 | 화기작업 | 화재 예방 |
+| KOSHA-P-2023-12 | 보호구 | 개인보호구 착용 |
+| KOSHA-C-2023-08 | 가설구조 | 비계 및 거푸집 |
+| KOSHA-S-2023-03 | 밀폐공간 | 밀폐공간 작업 |
+| KOSHA-E-2023-07 | 전기작업 | 전기 안전 |
+| KOSHA-L-2023-11 | 양중작업 | 크레인 및 양중기 |
+| KOSHA-F-2023-04 | 화재예방 | 용접 화재 감시 |
+
 ---
 
-*문서 작성일: 2024-12-20*
-*버전: 1.0.0*
+## 7. 설정 및 환경변수
 
+### 백엔드 application.properties
+
+```properties
+# Gemini API Configuration
+gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+gemini.api.timeout=30000
+
+# API Key 설정 (환경변수 권장)
+custom.gemini.key=${GEMINI_API_KEY:YOUR_API_KEY_HERE}
+
+# 또는 직접 설정 (개발용)
+custom.gemini.key=AIzaSyDl8iM56ICVcVg7-NF9ZC55unsKP3mXOu8
+```
+
+### 프론트엔드 .env
+
+```env
+# 백엔드 서버 URL
+VITE_API_BASE_URL=http://localhost:8080
+
+# Mock 모드 (백엔드 없이 테스트)
+VITE_USE_MOCK=false
+```
+
+### 환경변수 설정 방법
+
+```bash
+# Windows (PowerShell)
+$env:GEMINI_API_KEY="YOUR_API_KEY"
+
+# Windows (영구 설정)
+setx GEMINI_API_KEY "YOUR_API_KEY"
+
+# Linux/Mac
+export GEMINI_API_KEY="YOUR_API_KEY"
+```
+
+---
+
+## 8. 테스트 방법
+
+### 8.1 Swagger UI 테스트
+
+1. 백엔드 서버 실행: `./gradlew bootRun`
+2. Swagger UI 접속: http://localhost:8080/swagger-ui/index.html
+3. `POST /api/v1/business-plan/generate` 선택
+4. 예시 요청으로 테스트
+
+### 8.2 cURL 테스트
+
+```bash
+curl -X POST http://localhost:8080/api/v1/business-plan/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "inputType": "TEXT",
+    "inputText": "건설 현장 2층 비계 작업 중 안전난간이 심하게 흔들리고 있습니다."
+  }'
+```
+
+### 8.3 프론트엔드 테스트
+
+1. 백엔드 서버 실행: `cd safert-road-inclass && ./gradlew bootRun`
+2. 프론트엔드 실행: `cd Life-game/safety-quest-game && npm run dev`
+3. http://localhost:3000 접속
+4. 로그인 → Dashboard → 위험 분석 메뉴
+5. 위험 상황 입력 후 "AI 솔루션 요청" 클릭
+
+### 8.4 디버깅 모드
+
+프론트엔드 RiskSolutionPage에서:
+- **빈 칸으로 제출**: 기본 placeholder 텍스트로 테스트됨
+- 콘솔에서 `[GEMS API]` 로그 확인
+
+---
+
+## 9. 트러블슈팅
+
+### 문제: "서버에 연결할 수 없습니다"
+
+**원인**: 백엔드 서버가 실행되지 않음
+
+**해결**:
+```bash
+cd safert-road-inclass
+./gradlew bootRun
+```
+
+### 문제: Mock 응답만 반환됨
+
+**원인**: 프론트엔드 Mock 모드 활성화
+
+**해결**: `.env` 파일에서 `VITE_USE_MOCK=false` 설정
+
+### 문제: Gemini API 오류
+
+**원인**: API Key 문제 또는 할당량 초과
+
+**해결**:
+1. API Key 확인: `application.properties`의 `custom.gemini.key`
+2. Google AI Studio에서 할당량 확인
+3. Fallback 응답이 반환되는지 로그 확인
+
+### 문제: CORS 오류
+
+**원인**: 프론트엔드-백엔드 도메인 불일치
+
+**해결**: `SecurityConfig.java`의 `corsConfigurationSource()`에서 허용 도메인 확인
+```java
+configuration.setAllowedOrigins(Arrays.asList(
+    "http://localhost:3000",
+    "http://localhost:5173"
+));
+```
+
+---
+
+## 📊 관련 문서
+
+- [API 명세](./API_SPECIFICATION.md)
+- [백엔드 통합 가이드](./BACKEND_INTEGRATION_GUIDE.md)
+- [Gemini API 테스트 리포트](./GEMINI_API_TEST_REPORT.md)
+
+---
+
+*문서 작성일: 2024-12-20*  
+*최종 업데이트: 2026-01-08*  
+*버전: 2.0.0 (연동 완료)*
