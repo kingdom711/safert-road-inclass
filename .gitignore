@@ -134,3 +134,11 @@ playwright-report/
 *.bak
 *.tmp
 *.temp
+
+# ===========================================
+# SQLite Database Files
+# ===========================================
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm

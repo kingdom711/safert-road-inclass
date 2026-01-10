@@ -37,9 +37,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 
-	// Database
-	runtimeOnly 'com.mysql:mysql-connector-j'
-	runtimeOnly 'com.h2database:h2'
+	// Database - SQLite
+	runtimeOnly 'org.xerial:sqlite-jdbc:3.45.1.0'
+	// Hibernate SQLite Dialect (Community)
+	implementation 'org.hibernate.orm:hibernate-community-dialects:6.4.4.Final'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
@@ -53,9 +54,7 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 
-	// Flyway (Database Migration)
-	implementation 'org.flywaydb:flyway-core'
-	implementation 'org.flywaydb:flyway-mysql'
+	// Flyway 비활성화 - SQLite는 Flyway Teams 버전 필요하므로 ddl-auto 사용
 
 	// ULID Creator library (lexicographically sortable unique identifier)
 	implementation 'com.github.f4b6a3:ulid-creator:5.2.3'
