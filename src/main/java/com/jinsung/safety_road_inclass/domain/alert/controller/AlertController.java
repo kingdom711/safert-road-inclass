@@ -3,7 +3,7 @@ package com.jinsung.safety_road_inclass.domain.alert.controller;
 import com.jinsung.safety_road_inclass.domain.alert.dto.AlertRequest;
 import com.jinsung.safety_road_inclass.domain.alert.dto.AlertResponse;
 import com.jinsung.safety_road_inclass.domain.alert.service.AlertService;
-import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.auth.service.JwtTokenProvider.CustomUserPrincipal;
 import com.jinsung.safety_road_inclass.global.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -52,11 +52,11 @@ public class AlertController {
     @Operation(summary = "알림 생성", description = "새 알림을 생성합니다. (SAFETY_MANAGER 권한 필요)")
     @PostMapping
     public ApiResponse<AlertResponse> createAlert(
-            @Parameter(hidden = true) @AuthenticationPrincipal User user,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody AlertRequest request) {
         
-        log.info("알림 생성 요청: title={}, userId={}", request.getTitle(), user.getId());
-        AlertResponse alert = alertService.createAlert(request, user);
+        log.info("알림 생성 요청: title={}, userId={}", request.getTitle(), principal.userId());
+        AlertResponse alert = alertService.createAlert(request, principal.userId());
         return ApiResponse.success(alert);
     }
 

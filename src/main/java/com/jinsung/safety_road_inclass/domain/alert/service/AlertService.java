@@ -5,6 +5,7 @@ import com.jinsung.safety_road_inclass.domain.alert.dto.AlertResponse;
 import com.jinsung.safety_road_inclass.domain.alert.entity.Alert;
 import com.jinsung.safety_road_inclass.domain.alert.repository.AlertRepository;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.List;
 public class AlertService {
 
     private final AlertRepository alertRepository;
+    private final UserRepository userRepository;
 
     /**
      * 모든 알림 조회
@@ -57,7 +59,10 @@ public class AlertService {
      * 알림 생성
      */
     @Transactional
-    public AlertResponse createAlert(AlertRequest request, User createdBy) {
+    public AlertResponse createAlert(AlertRequest request, Long userId) {
+        User createdBy = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
         Alert alert = Alert.builder()
                 .title(request.getTitle())
                 .message(request.getMessage())
