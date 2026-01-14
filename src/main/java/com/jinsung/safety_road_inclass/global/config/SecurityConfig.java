@@ -20,6 +20,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
+import org.springframework.http.HttpMethod;
+
 /**
  * Spring Security Configuration
  * - JWT 기반 인증 (Stateless)
@@ -67,6 +69,12 @@ public class SecurityConfig {
                                                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html")
                                                 .permitAll()
                                                 .requestMatchers("/actuator/**").permitAll()
+
+                                                // Alert API - GET은 인증 불필요, POST/PUT/DELETE는 SAFETY_MANAGER만
+                                                .requestMatchers(HttpMethod.GET, "/api/v1/alerts/**").permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/alerts/**").hasRole("SAFETY_MANAGER")
+                                                .requestMatchers(HttpMethod.PUT, "/api/v1/alerts/**").hasRole("SAFETY_MANAGER")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/v1/alerts/**").hasRole("SAFETY_MANAGER")
 
                                                 // Role-based access control
                                                 .requestMatchers("/api/v1/reviews/**")

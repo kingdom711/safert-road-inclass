@@ -1,0 +1,3 @@
+fix: 백엔드 변경사항 반영 (ErrorCode 등)
+
+- `src/main/java/com/jinsung/safety_road_inclass/global/error/ErrorCode.java` 등 변경사항 반영
