@@ -70,11 +70,11 @@ public class SecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers("/actuator/**").permitAll()
 
-                                                // Alert API - GET은 인증 불필요, POST/PUT/DELETE는 SAFETY_MANAGER만
+                                                // Alert API - GET은 인증 불필요, POST/PUT/DELETE는 SUPERVISOR 또는 SAFETY_MANAGER
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/alerts/**").permitAll()
-                                                .requestMatchers(HttpMethod.POST, "/api/v1/alerts/**").hasRole("SAFETY_MANAGER")
-                                                .requestMatchers(HttpMethod.PUT, "/api/v1/alerts/**").hasRole("SAFETY_MANAGER")
-                                                .requestMatchers(HttpMethod.DELETE, "/api/v1/alerts/**").hasRole("SAFETY_MANAGER")
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/alerts/**").hasAnyRole("SUPERVISOR", "SAFETY_MANAGER")
+                                                .requestMatchers(HttpMethod.PUT, "/api/v1/alerts/**").hasAnyRole("SUPERVISOR", "SAFETY_MANAGER")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/v1/alerts/**").hasAnyRole("SUPERVISOR", "SAFETY_MANAGER")
 
                                                 // Role-based access control
                                                 .requestMatchers("/api/v1/reviews/**")

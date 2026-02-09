@@ -60,8 +60,10 @@ public class AlertService {
      */
     @Transactional
     public AlertResponse createAlert(AlertRequest request, Long userId) {
-        User createdBy = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User createdBy = null;
+        if (userId != null) {
+            createdBy = userRepository.findById(userId).orElse(null);
+        }
 
         Alert alert = Alert.builder()
                 .title(request.getTitle())
@@ -75,8 +77,9 @@ public class AlertService {
                 .build();
 
         Alert saved = alertRepository.save(alert);
-        log.info("알림 생성: id={}, title={}, createdBy={}", 
-                 saved.getId(), saved.getTitle(), createdBy.getUsername());
+        log.info("알림 생성: id={}, title={}, createdBy={}",
+                 saved.getId(), saved.getTitle(),
+                 createdBy != null ? createdBy.getUsername() : "시스템");
 
         return AlertResponse.from(saved);
     }

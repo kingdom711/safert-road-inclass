@@ -49,14 +49,15 @@ public class AlertController {
         return ApiResponse.success(alert);
     }
 
-    @Operation(summary = "알림 생성", description = "새 알림을 생성합니다. (SAFETY_MANAGER 권한 필요)")
+    @Operation(summary = "알림 생성", description = "새 알림을 생성합니다. (SUPERVISOR 또는 SAFETY_MANAGER 권한 필요)")
     @PostMapping
     public ApiResponse<AlertResponse> createAlert(
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody AlertRequest request) {
-        
-        log.info("알림 생성 요청: title={}, userId={}", request.getTitle(), principal.userId());
-        AlertResponse alert = alertService.createAlert(request, principal.userId());
+
+        Long userId = principal != null ? principal.userId() : null;
+        log.info("알림 생성 요청: title={}, userId={}", request.getTitle(), userId);
+        AlertResponse alert = alertService.createAlert(request, userId);
         return ApiResponse.success(alert);
     }
 
