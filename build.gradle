@@ -42,6 +42,9 @@ dependencies {
 	// Hibernate SQLite Dialect (Community)
 	implementation 'org.hibernate.orm:hibernate-community-dialects:6.4.4.Final'
 
+	// Database - PostgreSQL (Production)
+	implementation 'org.postgresql:postgresql'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
