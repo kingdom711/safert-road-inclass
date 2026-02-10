@@ -20,8 +20,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
-import org.springframework.http.HttpMethod;
-
 /**
  * Spring Security Configuration
  * - JWT 기반 인증 (Stateless)
@@ -70,11 +68,8 @@ public class SecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers("/actuator/**").permitAll()
 
-                                                // Alert API - GET은 인증 불필요, POST/PUT/DELETE는 SUPERVISOR 또는 SAFETY_MANAGER
-                                                .requestMatchers(HttpMethod.GET, "/api/v1/alerts/**").permitAll()
-                                                .requestMatchers(HttpMethod.POST, "/api/v1/alerts/**").hasAnyRole("SUPERVISOR", "SAFETY_MANAGER")
-                                                .requestMatchers(HttpMethod.PUT, "/api/v1/alerts/**").hasAnyRole("SUPERVISOR", "SAFETY_MANAGER")
-                                                .requestMatchers(HttpMethod.DELETE, "/api/v1/alerts/**").hasAnyRole("SUPERVISOR", "SAFETY_MANAGER")
+                                                // Alert API - 전체 허용 (프론트엔드 JWT 인증 미구현으로 임시 permitAll)
+                                                .requestMatchers("/api/v1/alerts/**").permitAll()
 
                                                 // Role-based access control
                                                 .requestMatchers("/api/v1/reviews/**")
