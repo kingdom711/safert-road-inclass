@@ -68,7 +68,16 @@ public enum ErrorCode {
     AI_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "AI002", "AI 서비스에 연결할 수 없습니다."),
 
     // ===== Alert (알림) =====
-    ALERT_NOT_FOUND(HttpStatus.NOT_FOUND, "AL001", "알림을 찾을 수 없습니다.");
+    ALERT_NOT_FOUND(HttpStatus.NOT_FOUND, "AL001", "알림을 찾을 수 없습니다."),
+
+    // ===== Points (포인트) =====
+    POINTS_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "포인트 정보를 찾을 수 없습니다."),
+    POINTS_INSUFFICIENT(HttpStatus.BAD_REQUEST, "P002", "포인트가 부족합니다."),
+    POINTS_INVALID_AMOUNT(HttpStatus.BAD_REQUEST, "P003", "유효하지 않은 포인트 금액입니다."),
+
+    // ===== Attendance (출석) =====
+    ATTENDANCE_ALREADY_CHECKED_IN(HttpStatus.CONFLICT, "AT001", "오늘 이미 출석하였습니다."),
+    ATTENDANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "AT002", "출석 기록을 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
