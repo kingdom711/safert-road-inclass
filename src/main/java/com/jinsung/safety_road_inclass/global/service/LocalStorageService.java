@@ -4,6 +4,7 @@ import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ import java.util.UUID;
  * LocalStorageService - 로컬 파일 시스템 저장 구현체
  */
 @Service
+@Profile("dev")
 @Slf4j
 public class LocalStorageService implements StorageService {
 
