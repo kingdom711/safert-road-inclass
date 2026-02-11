@@ -28,7 +28,7 @@ public enum ErrorCode {
     AUTH_EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "A003", "만료된 토큰입니다."),
     AUTH_ACCESS_DENIED(HttpStatus.FORBIDDEN, "A004", "접근 권한이 없습니다."),
     AUTH_INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "A005", "비밀번호가 일치하지 않습니다."),
-    
+
     // ===== User (사용자) =====
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
     USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "U002", "이미 존재하는 사용자입니다."),
@@ -77,10 +77,15 @@ public enum ErrorCode {
 
     // ===== Attendance (출석) =====
     ATTENDANCE_ALREADY_CHECKED_IN(HttpStatus.CONFLICT, "AT001", "오늘 이미 출석하였습니다."),
-    ATTENDANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "AT002", "출석 기록을 찾을 수 없습니다.");
+    ATTENDANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "AT002", "출석 기록을 찾을 수 없습니다."),
+
+    // ===== GameProfile (게임 프로필) =====
+    GAMEPROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "GP001", "게임 프로필을 찾을 수 없습니다."),
+    GAMEPROFILE_SPECIALIZATION_NOT_FOUND(HttpStatus.NOT_FOUND, "GP002", "해금되지 않은 전직입니다."),
+    GAMEPROFILE_SPECIALIZATION_ALREADY_UNLOCKED(HttpStatus.CONFLICT, "GP003", "이미 해금된 전직입니다."),
+    GAMEPROFILE_INVALID_EXP(HttpStatus.BAD_REQUEST, "GP004", "유효하지 않은 경험치 값입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;
 }
-
