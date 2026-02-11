@@ -83,7 +83,21 @@ public enum ErrorCode {
     GAMEPROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "GP001", "게임 프로필을 찾을 수 없습니다."),
     GAMEPROFILE_SPECIALIZATION_NOT_FOUND(HttpStatus.NOT_FOUND, "GP002", "해금되지 않은 전직입니다."),
     GAMEPROFILE_SPECIALIZATION_ALREADY_UNLOCKED(HttpStatus.CONFLICT, "GP003", "이미 해금된 전직입니다."),
-    GAMEPROFILE_INVALID_EXP(HttpStatus.BAD_REQUEST, "GP004", "유효하지 않은 경험치 값입니다.");
+    GAMEPROFILE_INVALID_EXP(HttpStatus.BAD_REQUEST, "GP004", "유효하지 않은 경험치 값입니다."),
+
+    // ===== Gold (골드) =====
+    GOLD_NOT_FOUND(HttpStatus.NOT_FOUND, "G001", "골드 정보를 찾을 수 없습니다."),
+    GOLD_INSUFFICIENT(HttpStatus.BAD_REQUEST, "G002", "골드가 부족합니다."),
+    GOLD_INVALID_AMOUNT(HttpStatus.BAD_REQUEST, "G003", "유효하지 않은 골드 금액입니다."),
+
+    // ===== Exchange (교환) =====
+    EXCHANGE_MINIMUM_NOT_MET(HttpStatus.BAD_REQUEST, "EX001", "최소 교환 금액에 미달합니다."),
+    EXCHANGE_INVALID_AMOUNT(HttpStatus.BAD_REQUEST, "EX002", "교환 가능한 단위로 입력해주세요."),
+
+    // ===== Reward (보상) =====
+    REWARD_NOT_FOUND(HttpStatus.NOT_FOUND, "RW001", "보상을 찾을 수 없습니다."),
+    REWARD_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "RW002", "현재 교환 불가능한 보상입니다."),
+    REWARD_OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "RW003", "보상이 품절되었습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
