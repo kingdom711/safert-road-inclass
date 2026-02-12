@@ -1,5 +1,6 @@
 package com.jinsung.safety_road_inclass.domain.reward.repository;
 
+import com.jinsung.safety_road_inclass.domain.reward.entity.RewardStatus;
 import com.jinsung.safety_road_inclass.domain.reward.entity.UserReward;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,4 +12,6 @@ import java.util.List;
 public interface UserRewardRepository extends JpaRepository<UserReward, Long> {
 
     List<UserReward> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    List<UserReward> findByStatusOrderByCreatedAtAsc(RewardStatus status);
 }

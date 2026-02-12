@@ -3,9 +3,11 @@ package com.jinsung.safety_road_inclass.domain.reward.service;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.gold.service.GoldService;
+import com.jinsung.safety_road_inclass.domain.inventory.service.InventoryService;
 import com.jinsung.safety_road_inclass.domain.reward.dto.RewardResponse;
 import com.jinsung.safety_road_inclass.domain.reward.dto.UserRewardResponse;
 import com.jinsung.safety_road_inclass.domain.reward.entity.Reward;
+import com.jinsung.safety_road_inclass.domain.reward.entity.RewardStatus;
 import com.jinsung.safety_road_inclass.domain.reward.entity.UserReward;
 import com.jinsung.safety_road_inclass.domain.reward.repository.RewardRepository;
 import com.jinsung.safety_road_inclass.domain.reward.repository.UserRewardRepository;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +35,7 @@ public class RewardService {
         private final UserRewardRepository userRewardRepository;
         private final UserRepository userRepository;
         private final GoldService goldService;
+        private final InventoryService inventoryService;
 
         /**
          * 활성화된 보상 목록 조회
@@ -104,5 +108,77 @@ public class RewardService {
                                 .stream()
                                 .map(UserRewardResponse::from)
                                 .collect(Collectors.toList());
+        }
+
+        /**
+         * 대기 중인 교환 요청 목록 조회 (관리자용)
+         */
+        public List<UserRewardResponse> getPendingRewards() {
+                return userRewardRepository.findByStatusOrderByCreatedAtAsc(RewardStatus.PENDING)
+                                .stream()
+                                .map(UserRewardResponse::from)
+                                .collect(Collectors.toList());
+        }
+
+        /**
+         * 교환 요청 승인 (관리자) → 쿠폰코드 생성 + 인벤토리 전송
+         */
+        @Transactional
+        public UserRewardResponse approveReward(Long userRewardId) {
+                UserReward userReward = userRewardRepository.findById(userRewardId)
+                                .orElseThrow(() -> new CustomException(ErrorCode.REWARD_NOT_FOUND));
+
+                if (userReward.getStatus() != RewardStatus.PENDING) {
+                        throw new CustomException(ErrorCode.REWARD_ALREADY_CLAIMED);
+                }
+
+                // 가상 쿠폰코드 생성
+                String couponCode = generateCouponCode();
+                userReward.deliver(couponCode);
+
+                // 인벤토리에 기프티콘 아이템 추가
+                Reward reward = userReward.getReward();
+                inventoryService.addItemToInventory(
+                                userReward.getUser().getId(),
+                                "reward_" + reward.getId(),
+                                1,
+                                "reward_exchange");
+
+                log.info("Reward approved: userRewardId={}, couponCode={}, userId={}",
+                                userRewardId, couponCode, userReward.getUser().getId());
+
+                return UserRewardResponse.from(userReward);
+        }
+
+        /**
+         * 교환 요청 거절 (관리자) → 골드 환불
+         */
+        @Transactional
+        public UserRewardResponse rejectReward(Long userRewardId) {
+                UserReward userReward = userRewardRepository.findById(userRewardId)
+                                .orElseThrow(() -> new CustomException(ErrorCode.REWARD_NOT_FOUND));
+
+                if (userReward.getStatus() != RewardStatus.PENDING) {
+                        throw new CustomException(ErrorCode.REWARD_ALREADY_CLAIMED);
+                }
+
+                userReward.cancel();
+
+                // 골드 환불
+                goldService.addGold(
+                                userReward.getUser().getId(),
+                                userReward.getGoldPaid(),
+                                "보상 교환 거절 환불",
+                                userReward.getReward().getName());
+
+                log.info("Reward rejected: userRewardId={}, goldRefunded={}, userId={}",
+                                userRewardId, userReward.getGoldPaid(), userReward.getUser().getId());
+
+                return UserRewardResponse.from(userReward);
+        }
+
+        private String generateCouponCode() {
+                String uuid = UUID.randomUUID().toString().replace("-", "").toUpperCase();
+                return "GIFT-" + uuid.substring(0, 4) + "-" + uuid.substring(4, 8);
         }
 }

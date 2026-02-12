@@ -27,6 +27,8 @@ public class UserRewardResponse {
     private String couponCode;
     private LocalDateTime deliveredAt;
     private LocalDateTime createdAt;
+    private String userName;
+    private String userEmail;
 
     public static UserRewardResponse from(UserReward userReward) {
         return UserRewardResponse.builder()
@@ -42,6 +44,8 @@ public class UserRewardResponse {
                 .couponCode(userReward.getCouponCode())
                 .deliveredAt(userReward.getDeliveredAt())
                 .createdAt(userReward.getCreatedAt())
+                .userName(userReward.getUser().getName())
+                .userEmail(userReward.getUser().getEmail())
                 .build();
     }
 }

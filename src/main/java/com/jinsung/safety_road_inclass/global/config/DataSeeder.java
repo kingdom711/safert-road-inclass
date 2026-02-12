@@ -3,6 +3,9 @@ package com.jinsung.safety_road_inclass.global.config;
 import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
+import com.jinsung.safety_road_inclass.domain.reward.entity.Reward;
+import com.jinsung.safety_road_inclass.domain.reward.entity.RewardType;
+import com.jinsung.safety_road_inclass.domain.reward.repository.RewardRepository;
 import com.jinsung.safety_road_inclass.domain.template.entity.ChecklistTemplate;
 import com.jinsung.safety_road_inclass.domain.template.entity.TemplateItem;
 import com.jinsung.safety_road_inclass.domain.template.entity.WorkType;
@@ -32,6 +35,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final WorkTypeRepository workTypeRepository;
     private final ChecklistTemplateRepository templateRepository;
+    private final RewardRepository rewardRepository;
 
     @Override
     public void run(String... args) {
@@ -46,6 +50,7 @@ public class DataSeeder implements CommandLineRunner {
             log.info("=== 초기 데이터 시딩 시작 ===");
             seedUsers();
             seedTemplates();
+            seedRewards();
             log.info("=== 초기 데이터 시딩 완료 ===");
         } catch (Exception e) {
             log.error("데이터 시딩 중 오류 발생: {}", e.getMessage(), e);
@@ -124,6 +129,45 @@ public class DataSeeder implements CommandLineRunner {
         templateRepository.save(confinedTemplate);
 
         log.info("템플릿 {}개 생성 완료", templateRepository.count());
+    }
+
+    private void seedRewards() {
+        log.info("보상 데이터 시딩 시작...");
+
+        // 아메리카노 기프티콘
+        rewardRepository.save(Reward.builder()
+            .name("스타벅스 아메리카노")
+            .description("스타벅스 아이스 아메리카노 Tall 기프티콘")
+            .goldPrice(5)
+            .cashValue(4500)
+            .imageUrl("/images/rewards/americano.png")
+            .type(RewardType.COFFEE_COUPON)
+            .totalQuantity(100)
+            .build());
+
+        // 카페라떼 기프티콘
+        rewardRepository.save(Reward.builder()
+            .name("스타벅스 카페라떼")
+            .description("스타벅스 아이스 카페라떼 Tall 기프티콘")
+            .goldPrice(8)
+            .cashValue(5000)
+            .imageUrl("/images/rewards/cafelatte.png")
+            .type(RewardType.COFFEE_COUPON)
+            .totalQuantity(50)
+            .build());
+
+        // 편의점 상품권
+        rewardRepository.save(Reward.builder()
+            .name("CU 5,000원 상품권")
+            .description("CU 편의점 모바일 상품권 5,000원")
+            .goldPrice(10)
+            .cashValue(5000)
+            .imageUrl("/images/rewards/cu_giftcard.png")
+            .type(RewardType.GIFT_CARD)
+            .totalQuantity(30)
+            .build());
+
+        log.info("보상 {}개 생성 완료", rewardRepository.count());
     }
 }
 
