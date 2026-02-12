@@ -2,7 +2,9 @@ package com.jinsung.safety_road_inclass.domain.auth.service;
 
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginResponse;
+import com.jinsung.safety_road_inclass.domain.auth.dto.SignupRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.TokenRefreshRequest;
+import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
@@ -25,6 +27,36 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+
+    /**
+     * 회원가입
+     */
+    @Transactional
+    public LoginResponse signup(SignupRequest request) {
+        // 1. 이메일(username) 중복 체크
+        if (userRepository.existsByUsername(request.getEmail())) {
+            throw new CustomException(ErrorCode.USER_ALREADY_EXISTS);
+        }
+
+        // 2. User 생성 (이메일을 username으로 사용, 기본 역할: WORKER)
+        User user = User.builder()
+                .username(request.getEmail())
+                .password(request.getPassword())
+                .role(Role.ROLE_WORKER)
+                .name(request.getName())
+                .email(request.getEmail())
+                .build();
+        user.encodePassword(passwordEncoder);
+        userRepository.save(user);
+
+        // 3. 토큰 발급 (회원가입 즉시 로그인)
+        String accessToken = jwtTokenProvider.generateAccessToken(user);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+
+        log.info("회원가입 성공: userId={}, username={}", user.getId(), user.getUsername());
+
+        return LoginResponse.of(accessToken, refreshToken, user);
+    }
 
     /**
      * 로그인

@@ -2,6 +2,7 @@ package com.jinsung.safety_road_inclass.domain.auth.controller;
 
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginResponse;
+import com.jinsung.safety_road_inclass.domain.auth.dto.SignupRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.TokenRefreshRequest;
 import com.jinsung.safety_road_inclass.domain.auth.service.AuthService;
 import com.jinsung.safety_road_inclass.domain.auth.service.JwtTokenProvider;
@@ -28,6 +29,26 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Operation(summary = "회원가입", description = "이메일, 비밀번호, 닉네임으로 회원가입 후 JWT 토큰을 발급받습니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "회원가입 성공",
+            content = @Content(schema = @Schema(implementation = LoginResponse.class))
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "이미 존재하는 사용자"
+        )
+    })
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse<LoginResponse>> signup(
+            @Valid @RequestBody SignupRequest request) {
+
+        LoginResponse response = authService.signup(request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @Operation(summary = "로그인", description = "사용자 ID와 비밀번호로 로그인하여 JWT 토큰을 발급받습니다.")
     @ApiResponses({
