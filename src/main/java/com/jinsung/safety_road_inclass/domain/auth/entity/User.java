@@ -37,13 +37,22 @@ public class User extends BaseTimeEntity {
     @Column(length = 100)
     private String email;
 
+    @Column(nullable = false)
+    private boolean isVerified = false;
+
+    @Column(unique = true, length = 20)
+    private String phoneNumber;
+
     @Builder
-    public User(String username, String password, Role role, String name, String email) {
+    public User(String username, String password, Role role, String name, String email, boolean isVerified,
+            String phoneNumber) {
         this.username = username;
         this.password = password;
         this.role = role;
         this.name = name;
         this.email = email;
+        this.isVerified = isVerified;
+        this.phoneNumber = phoneNumber;
     }
 
     /**
@@ -59,5 +68,9 @@ public class User extends BaseTimeEntity {
     public boolean matchesPassword(PasswordEncoder encoder, String rawPassword) {
         return encoder.matches(rawPassword, this.password);
     }
-}
 
+    public void verify(String phoneNumber) {
+        this.isVerified = true;
+        this.phoneNumber = phoneNumber;
+    }
+}

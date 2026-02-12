@@ -73,8 +73,8 @@ public class SecurityConfig {
 
                                                 // Role-based access control
                                                 .requestMatchers("/api/v1/reviews/**")
-                                                .hasAnyRole("SUPERVISOR", "SAFETY_MANAGER")
-                                                .requestMatchers("/api/v1/admin/**").hasRole("SAFETY_MANAGER")
+                                                .hasAnyRole("SUPERVISOR", "SAFETY_MANAGER", "ADMIN")
+                                                .requestMatchers("/api/v1/admin/**").hasAnyRole("SAFETY_MANAGER", "ADMIN")
 
                                                 // 그 외 모든 요청은 인증 필요
                                                 .anyRequest().authenticated())

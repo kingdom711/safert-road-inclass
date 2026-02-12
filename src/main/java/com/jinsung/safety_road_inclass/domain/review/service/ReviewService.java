@@ -50,9 +50,10 @@ public class ReviewService {
             throw new CustomException(ErrorCode.CANNOT_REVIEW_OWN_CHECKLIST);
         }
 
-        // 4. 권한 확인 (SUPERVISOR, SAFETY_MANAGER만 검토 가능)
-        if (reviewer.getRole() != Role.ROLE_SUPERVISOR 
-                && reviewer.getRole() != Role.ROLE_SAFETY_MANAGER) {
+        // 4. 권한 확인 (SUPERVISOR, SAFETY_MANAGER, ADMIN만 검토 가능)
+        if (reviewer.getRole() != Role.ROLE_SUPERVISOR
+                && reviewer.getRole() != Role.ROLE_SAFETY_MANAGER
+                && reviewer.getRole() != Role.ROLE_ADMIN) {
             throw new CustomException(ErrorCode.AUTH_ACCESS_DENIED);
         }
 

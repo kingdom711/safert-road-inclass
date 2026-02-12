@@ -9,7 +9,8 @@ public enum Role {
     
     ROLE_WORKER,         // 작업자 (기술인) - 체크리스트 작성
     ROLE_SUPERVISOR,     // 관리감독자 - 검토 및 승인
-    ROLE_SAFETY_MANAGER; // 안전관리자 - 전체 현황 조회, 최종 승인
+    ROLE_SAFETY_MANAGER, // 안전관리자 - 전체 현황 조회, 최종 승인
+    ROLE_ADMIN;          // 관리자 - 모든 역할의 기능 사용 가능 (테스트용)
 
     /**
      * ROLE_ 접두어 제거한 이름 반환

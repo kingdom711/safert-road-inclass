@@ -1,5 +1,6 @@
 package com.jinsung.safety_road_inclass.domain.checklist.service;
 
+import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.checklist.dto.*;
 import com.jinsung.safety_road_inclass.domain.checklist.entity.*;
@@ -114,9 +115,10 @@ public class ChecklistService {
                 .orElseThrow(() -> new CustomException(ErrorCode.CHECKLIST_NOT_FOUND));
 
         // 권한 확인: 작성자 본인만 조회 가능 (또는 SUPERVISOR/ADMIN)
-        if (!checklist.getCreatedBy().getId().equals(currentUser.getId()) 
+        if (!checklist.getCreatedBy().getId().equals(currentUser.getId())
                 && !currentUser.getRole().name().equals("SUPERVISOR")
-                && !currentUser.getRole().name().equals("ADMIN")) {
+                && !currentUser.getRole().name().equals("ADMIN")
+                && currentUser.getRole() != Role.ROLE_ADMIN) {
             throw new CustomException(ErrorCode.AUTH_ACCESS_DENIED);
         }
 

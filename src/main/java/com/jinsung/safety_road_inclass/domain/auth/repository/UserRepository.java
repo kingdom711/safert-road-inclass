@@ -24,6 +24,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     boolean existsByUsername(String username);
 
+    boolean existsByPhoneNumber(String phoneNumber);
+
     /**
      * 역할별 사용자 목록 조회
      */
@@ -35,4 +37,3 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByEmail(String email);
 }
-

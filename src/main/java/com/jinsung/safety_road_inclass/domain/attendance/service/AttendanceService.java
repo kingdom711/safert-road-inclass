@@ -40,6 +40,7 @@ public class AttendanceService {
     private final UserRepository userRepository;
     private final PointService pointService;
     private final ActivityLogService activityLogService;
+    private final AttendanceRewardService attendanceRewardService;
 
     /**
      * 출석 체크인
@@ -91,7 +92,14 @@ public class AttendanceService {
         activityLogService.log(userId, ActivityType.ATTENDANCE_CHECK_IN,
                 "출석 체크인", description, null);
 
-        log.info("Check-in: userId={}, streak={}, points={}, bonus={}", userId, userStreak.getCurrentStreak(), points, bonusAwarded);
+        // 8. 출석 보상 수령 가능 상태 생성
+        int attendanceCountThisMonth = getAttendanceCountThisMonth(userId, today);
+        if (attendanceCountThisMonth <= 26) {
+            attendanceRewardService.createAvailableReward(userId, attendanceCountThisMonth, today, record);
+        }
+
+        log.info("Check-in: userId={}, streak={}, points={}, bonus={}, attendanceCount={}", 
+                userId, userStreak.getCurrentStreak(), points, bonusAwarded, attendanceCountThisMonth);
 
         return CheckInResponse.builder()
                 .checkInDate(today)
@@ -100,6 +108,18 @@ public class AttendanceService {
                 .longestStreak(userStreak.getLongestStreak())
                 .bonusAwarded(bonusAwarded)
                 .build();
+    }
+
+    /**
+     * 이번 달 출석 횟수 조회
+     */
+    private int getAttendanceCountThisMonth(Long userId, LocalDate date) {
+        LocalDate firstDayOfMonth = date.withDayOfMonth(1);
+        LocalDate lastDayOfMonth = date.withDayOfMonth(date.lengthOfMonth());
+        
+        return (int) attendanceRecordRepository
+                .findByUserIdAndCheckInDateBetweenOrderByCheckInDateAsc(userId, firstDayOfMonth, lastDayOfMonth)
+                .size();
     }
 
     /**

@@ -1,0 +1,525 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Task :compileJava
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\inventory\repository\UserInventoryItemRepository.java:35: error: method findByUserIdAndItemTypeOrderByCreatedAtDesc(Long,InventoryItemType) is already defined in interface UserInventoryItemRepository
+    List<UserInventoryItem> findByUserIdAndItemTypeOrderByCreatedAtDesc(
+                            ^
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\auth\service\JwtTokenProvider.java:53: error: cannot find symbol
+            .subject(user.getUsername())
+                         ^
+  symbol:   method getUsername()
+  location: variable user of type User
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\auth\service\JwtTokenProvider.java:54: error: cannot find symbol
+            .claim("userId", user.getId())
+                                 ^
+  symbol:   method getId()
+  location: variable user of type User
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\auth\service\JwtTokenProvider.java:55: error: cannot find symbol
+            .claim("role", user.getRole().name())
+                               ^
+  symbol:   method getRole()
+  location: variable user of type User
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\auth\service\JwtTokenProvider.java:56: error: cannot find symbol
+            .claim("name", user.getName())
+                               ^
+  symbol:   method getName()
+  location: variable user of type User
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\auth\service\JwtTokenProvider.java:71: error: cannot find symbol
+            .subject(user.getUsername())
+                         ^
+  symbol:   method getUsername()
+  location: variable user of type User
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\auth\service\JwtTokenProvider.java:72: error: cannot find symbol
+            .claim("userId", user.getId())
+                                 ^
+  symbol:   method getId()
+  location: variable user of type User
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\auth\service\JwtTokenProvider.java:117: error: cannot find symbol
+            log.warn("만료된 JWT 토큰: {}", e.getMessage());
+            ^
+  symbol:   variable log
+  location: class JwtTokenProvider
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\auth\service\JwtTokenProvider.java:120: error: cannot find symbol
+            log.warn("유효하지 않은 JWT 토큰: {}", e.getMessage());
+            ^
+  symbol:   variable log
+  location: class JwtTokenProvider
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\service\ActivityLogService.java:38: error: cannot find symbol
+        ActivityLog activityLog = ActivityLog.builder()
+                                             ^
+  symbol:   method builder()
+  location: class ActivityLog
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\service\ActivityLogService.java:47: error: cannot find symbol
+        log.info("Activity logged: userId={}, type={}, title={}", userId, activityType, title);
+        ^
+  symbol:   variable log
+  location: class ActivityLogService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\global\common\ApiResponse.java:43: error: cannot infer type arguments for ApiResponse<>
+        return new ApiResponse<>(true, data, null);
+               ^
+  reason: cannot infer type-variable(s) T
+    (actual and formal argument lists differ in length)
+  where T is a type-variable:
+    T extends Object declared in class ApiResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\global\common\ApiResponse.java:50: error: cannot infer type arguments for ApiResponse<>
+        return new ApiResponse<>(true, null, null);
+               ^
+  reason: cannot infer type-variable(s) T
+    (actual and formal argument lists differ in length)
+  where T is a type-variable:
+    T extends Object declared in class ApiResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\global\common\ApiResponse.java:57: error: constructor ErrorDetail in class ErrorDetail cannot be applied to given types;
+        return new ApiResponse<>(false, null, new ErrorDetail(code, message, null));
+                                              ^
+  required: no arguments
+  found:    String,String,<null>
+  reason: actual and formal argument lists differ in length
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\global\common\ApiResponse.java:64: error: constructor ErrorDetail in class ErrorDetail cannot be applied to given types;
+        return new ApiResponse<>(false, null, new ErrorDetail(code, message, details));
+                                              ^
+  required: no arguments
+  found:    String,String,Object
+  reason: actual and formal argument lists differ in length
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\dto\ActivityLogResponse.java:25: error: cannot find symbol
+        return ActivityLogResponse.builder()
+                                  ^
+  symbol:   method builder()
+  location: class ActivityLogResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\dto\ActivityLogResponse.java:26: error: cannot find symbol
+                .id(activityLog.getId())
+                               ^
+  symbol:   method getId()
+  location: variable activityLog of type ActivityLog
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\dto\ActivityLogResponse.java:27: error: cannot find symbol
+                .activityType(activityLog.getActivityType())
+                                         ^
+  symbol:   method getActivityType()
+  location: variable activityLog of type ActivityLog
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\dto\ActivityLogResponse.java:28: error: cannot find symbol
+                .title(activityLog.getTitle())
+                                  ^
+  symbol:   method getTitle()
+  location: variable activityLog of type ActivityLog
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\dto\ActivityLogResponse.java:29: error: cannot find symbol
+                .description(activityLog.getDescription())
+                                        ^
+  symbol:   method getDescription()
+  location: variable activityLog of type ActivityLog
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\dto\ActivityLogResponse.java:30: error: cannot find symbol
+                .metadata(activityLog.getMetadata())
+                                     ^
+  symbol:   method getMetadata()
+  location: variable activityLog of type ActivityLog
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\activity\dto\ActivityLogResponse.java:31: error: cannot find symbol
+                .createdAt(activityLog.getCreatedAt())
+                                      ^
+  symbol:   method getCreatedAt()
+  location: variable activityLog of type ActivityLog
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\AiController.java:41: error: cannot find symbol
+        log.info("AI 텍스트 분석 요청 수신: checklistId={}, contentLength={}", 
+        ^
+  symbol:   variable log
+  location: class AiController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\AiController.java:42: error: cannot find symbol
+                request.getChecklistId(), 
+                       ^
+  symbol:   method getChecklistId()
+  location: variable request of type @jakarta.validation.Valid AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\AiController.java:43: error: cannot find symbol
+                request.getContent() != null ? request.getContent().length() : 0);
+                       ^
+  symbol:   method getContent()
+  location: variable request of type @jakarta.validation.Valid AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\AiController.java:43: error: cannot find symbol
+                request.getContent() != null ? request.getContent().length() : 0);
+                                                      ^
+  symbol:   method getContent()
+  location: variable request of type @jakarta.validation.Valid AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\AiController.java:49: error: cannot find symbol
+        log.info("AI 텍스트 분석 완료: checklistId={}, riskLevel={}", 
+        ^
+  symbol:   variable log
+  location: class AiController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\AiController.java:50: error: cannot find symbol
+                request.getChecklistId(), 
+                       ^
+  symbol:   method getChecklistId()
+  location: variable request of type @jakarta.validation.Valid AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\AiController.java:51: error: cannot find symbol
+                response.getRiskLevel());
+                        ^
+  symbol:   method getRiskLevel()
+  location: variable response of type AiAnalysisResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\AiController.java:64: error: cannot find symbol
+        log.info("AI 이미지 분석 요청 수신: filename={}, size={}", 
+        ^
+  symbol:   variable log
+  location: class AiController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:53: error: cannot find symbol
+        log.info("[문서 보강 요청] contentLength={}", draftContent != null ? draftContent.length() : 0);
+        ^
+  symbol:   variable log
+  location: class DocumentEnhancementService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:57: error: cannot find symbol
+            log.warn("[문서 보강] Spring AI ChatModel이 주입되지 않아 원본 내용을 그대로 반환합니다.");
+            ^
+  symbol:   variable log
+  location: class DocumentEnhancementService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:58: error: cannot find symbol
+            return DocumentEnhancementResult.builder()
+                                            ^
+  symbol:   method builder()
+  location: class DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:91: error: cannot find symbol
+                log.warn("[응답 내용 추출 실패] 오류 발생: {}", e.getMessage());
+                ^
+  symbol:   variable log
+  location: class DocumentEnhancementService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:109: error: cannot find symbol
+                log.debug("[토큰 사용량 추출 실패] 메타데이터 접근 중 오류: {}", e.getMessage());
+                ^
+  symbol:   variable log
+  location: class DocumentEnhancementService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:114: error: cannot find symbol
+                log.info("[Gemini Usage Log] Input: {}, Output: {}, Total: {}",
+                ^
+  symbol:   variable log
+  location: class DocumentEnhancementService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:120: error: cannot find symbol
+            log.info("[문서 보강 완료] enhancedContentLength={}", enhancedContent != null ? enhancedContent.length() : 0);
+            ^
+  symbol:   variable log
+  location: class DocumentEnhancementService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:122: error: cannot find symbol
+            return DocumentEnhancementResult.builder()
+                                            ^
+  symbol:   method builder()
+  location: class DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:130: error: cannot find symbol
+            log.error("[문서 보강 실패] 오류 발생: {}", e.getMessage(), e);
+            ^
+  symbol:   variable log
+  location: class DocumentEnhancementService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\DocumentEnhancementService.java:132: error: cannot find symbol
+            return DocumentEnhancementResult.builder()
+                                            ^
+  symbol:   method builder()
+  location: class DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:35: error: cannot find symbol
+        log.info("[AI 문서 보강 요청] checklistId={}, contentLength={}", 
+        ^
+  symbol:   variable log
+  location: class AiAnalysisService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:36: error: cannot find symbol
+                 request.getChecklistId(), 
+                        ^
+  symbol:   method getChecklistId()
+  location: variable request of type AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:37: error: cannot find symbol
+                 request.getContent() != null ? request.getContent().length() : 0);
+                        ^
+  symbol:   method getContent()
+  location: variable request of type AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:37: error: cannot find symbol
+                 request.getContent() != null ? request.getContent().length() : 0);
+                                                       ^
+  symbol:   method getContent()
+  location: variable request of type AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:40: error: cannot find symbol
+        String draftContent = request.getContent();
+                                     ^
+  symbol:   method getContent()
+  location: variable request of type AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:41: error: cannot find symbol
+        Long checklistId = request.getChecklistId();
+                                  ^
+  symbol:   method getChecklistId()
+  location: variable request of type AiAnalysisRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:46: error: cannot find symbol
+        log.info("[AI 문서 보강 완료] checklistId={}, enhancedContentLength={}", 
+        ^
+  symbol:   variable log
+  location: class AiAnalysisService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:48: error: cannot find symbol
+                enhancementResult.getEnhancedContent() != null ? enhancementResult.getEnhancedContent().length() : 0);
+                                 ^
+  symbol:   method getEnhancedContent()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:48: error: cannot find symbol
+                enhancementResult.getEnhancedContent() != null ? enhancementResult.getEnhancedContent().length() : 0);
+                                                                                  ^
+  symbol:   method getEnhancedContent()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:66: error: cannot find symbol
+        if (enhancementResult.getEnhancedContent() != null && 
+                             ^
+  symbol:   method getEnhancedContent()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:67: error: cannot find symbol
+            !enhancementResult.getEnhancedContent().isEmpty()) {
+                              ^
+  symbol:   method getEnhancedContent()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:69: error: cannot find symbol
+            String[] lines = enhancementResult.getEnhancedContent().split("\n");
+                                              ^
+  symbol:   method getEnhancedContent()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:96: error: cannot find symbol
+        if (enhancementResult.getPromptTokens() != null || 
+                             ^
+  symbol:   method getPromptTokens()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:97: error: cannot find symbol
+            enhancementResult.getGenerationTokens() != null) {
+                             ^
+  symbol:   method getGenerationTokens()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:98: error: cannot find symbol
+            usage = AiAnalysisResponse.Usage.builder()
+                                            ^
+  symbol:   method builder()
+  location: class Usage
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:99: error: cannot find symbol
+                    .promptTokens(enhancementResult.getPromptTokens())
+                                                   ^
+  symbol:   method getPromptTokens()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:100: error: cannot find symbol
+                    .candidatesTokens(enhancementResult.getGenerationTokens())
+                                                       ^
+  symbol:   method getGenerationTokens()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:101: error: cannot find symbol
+                    .totalTokens(enhancementResult.getTotalTokens())
+                                                  ^
+  symbol:   method getTotalTokens()
+  location: variable enhancementResult of type DocumentEnhancementResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:105: error: cannot find symbol
+        return AiAnalysisResponse.builder()
+                                 ^
+  symbol:   method builder()
+  location: class AiAnalysisResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:120: error: cannot find symbol
+        log.info("[AI 이미지 분석 요청] filename={}, size={}bytes", filename, imageData != null ? imageData.length : 0);
+        ^
+  symbol:   variable log
+  location: class AiAnalysisService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\AiAnalysisService.java:123: error: cannot find symbol
+        return AiPhotoAnalysisResponse.builder()
+                                      ^
+  symbol:   method builder()
+  location: class AiPhotoAnalysisResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:126: error: cannot find symbol
+        log.info("[GEMS AI 요청 시작] requestId={}, inputType={}, inputTextLength={}", 
+        ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:128: error: cannot find symbol
+                 request.getInputType(),
+                        ^
+  symbol:   method getInputType()
+  location: variable request of type @jakarta.validation.Valid BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:129: error: cannot find symbol
+                 request.getInputText() != null ? request.getInputText().length() : 0);
+                        ^
+  symbol:   method getInputText()
+  location: variable request of type @jakarta.validation.Valid BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:129: error: cannot find symbol
+                 request.getInputText() != null ? request.getInputText().length() : 0);
+                                                         ^
+  symbol:   method getInputText()
+  location: variable request of type @jakarta.validation.Valid BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:131: error: cannot find symbol
+        if (log.isDebugEnabled()) {
+            ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:133: error: cannot find symbol
+                log.debug("[GEMS AI 요청 상세] requestId={}, request={}", requestId, 
+                ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:136: error: cannot find symbol
+                log.debug("[GEMS AI 요청 상세] requestId={}, request 파싱 실패: {}", requestId, e.getMessage());
+                ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:144: error: cannot find symbol
+            log.info("[GEMS AI 요청 성공] requestId={}, analysisId={}, riskLevel={}, duration={}ms", 
+            ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:146: error: cannot find symbol
+                     response.getAnalysisId(),
+                             ^
+  symbol:   method getAnalysisId()
+  location: variable response of type BusinessPlanResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:147: error: cannot find symbol
+                     response.getRiskLevel(),
+                             ^
+  symbol:   method getRiskLevel()
+  location: variable response of type BusinessPlanResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:150: error: cannot find symbol
+            if (log.isDebugEnabled()) {
+                ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:152: error: cannot find symbol
+                    log.debug("[GEMS AI 응답 상세] requestId={}, response={}", requestId,
+                    ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:155: error: cannot find symbol
+                    log.debug("[GEMS AI 응답 상세] requestId={}, response 파싱 실패: {}", requestId, e.getMessage());
+                    ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\controller\BusinessPlanController.java:163: error: cannot find symbol
+            log.error("[GEMS AI 요청 실패] requestId={}, duration={}ms, error={}", 
+            ^
+  symbol:   variable log
+  location: class BusinessPlanController
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:34: error: cannot find symbol
+        log.info("[GEMS AI 분석 시작] requestId={}, inputType={}, inputTextLength={}", 
+        ^
+  symbol:   variable log
+  location: class BusinessPlanService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:36: error: cannot find symbol
+                 request.getInputType(),
+                        ^
+  symbol:   method getInputType()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:37: error: cannot find symbol
+                 request.getInputText() != null ? request.getInputText().length() : 0);
+                        ^
+  symbol:   method getInputText()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:37: error: cannot find symbol
+                 request.getInputText() != null ? request.getInputText().length() : 0);
+                                                         ^
+  symbol:   method getInputText()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:45: error: cannot find symbol
+        if (request.getContext() != null) {
+                   ^
+  symbol:   method getContext()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:46: error: cannot find symbol
+            workType = request.getContext().getWorkType();
+                              ^
+  symbol:   method getContext()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:47: error: cannot find symbol
+            location = request.getContext().getLocation();
+                              ^
+  symbol:   method getContext()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:48: error: cannot find symbol
+            workerCount = request.getContext().getWorkerCount();
+                                 ^
+  symbol:   method getContext()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:49: error: cannot find symbol
+            currentTask = request.getContext().getCurrentTask();
+                                 ^
+  symbol:   method getContext()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:51: error: cannot find symbol
+            log.debug("[GEMS Context] requestId={}, workType={}, location={}, workerCount={}, currentTask={}",
+            ^
+  symbol:   variable log
+  location: class BusinessPlanService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:57: error: cannot find symbol
+            log.info("[Gemini API 호출 시작] requestId={}", requestId);
+            ^
+  symbol:   variable log
+  location: class BusinessPlanService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:61: error: cannot find symbol
+                request.getInputText(),
+                       ^
+  symbol:   method getInputText()
+  location: variable request of type BusinessPlanRequest
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:69: error: cannot find symbol
+            log.info("[Gemini API 호출 완료] requestId={}, riskFactor={}, riskLevel={}, duration={}ms", 
+            ^
+  symbol:   variable log
+  location: class BusinessPlanService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:71: error: cannot find symbol
+                     analysisResult.getRiskFactor(), 
+                                   ^
+  symbol:   method getRiskFactor()
+  location: variable analysisResult of type GeminiAnalysisResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:72: error: cannot find symbol
+                     analysisResult.getRiskLevel(),
+                                   ^
+  symbol:   method getRiskLevel()
+  location: variable analysisResult of type GeminiAnalysisResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:83: error: cannot find symbol
+            BusinessPlanResponse response = BusinessPlanResponse.builder()
+                                                                ^
+  symbol:   method builder()
+  location: class BusinessPlanResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:84: error: cannot find symbol
+                    .riskFactor(analysisResult.getRiskFactor())
+                                              ^
+  symbol:   method getRiskFactor()
+  location: variable analysisResult of type GeminiAnalysisResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:85: error: cannot find symbol
+                    .remediationSteps(analysisResult.getRemediationSteps())
+                                                    ^
+  symbol:   method getRemediationSteps()
+  location: variable analysisResult of type GeminiAnalysisResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:86: error: cannot find symbol
+                    .referenceCode(analysisResult.getReferenceCode())
+                                                 ^
+  symbol:   method getReferenceCode()
+  location: variable analysisResult of type GeminiAnalysisResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:87: error: cannot find symbol
+                    .riskLevel(analysisResult.getRiskLevel())
+                                             ^
+  symbol:   method getRiskLevel()
+  location: variable analysisResult of type GeminiAnalysisResult
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:94: error: cannot find symbol
+            log.info("[GEMS AI 분석 완료] requestId={}, analysisId={}, duration={}ms", 
+            ^
+  symbol:   variable log
+  location: class BusinessPlanService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\BusinessPlanService.java:101: error: cannot find symbol
+            log.error("[GEMS AI 분석 실패] requestId={}, duration={}ms, error={}", 
+            ^
+  symbol:   variable log
+  location: class BusinessPlanService
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\GeminiService.java:90: error: cannot find symbol
+            if (response.getUsageMetadata() != null) {
+                        ^
+  symbol:   method getUsageMetadata()
+  location: variable response of type GeminiResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\GeminiService.java:92: error: cannot find symbol
+                usageMetadata.setPromptTokenCount(response.getUsageMetadata().getPromptTokenCount());
+                                                          ^
+  symbol:   method getUsageMetadata()
+  location: variable response of type GeminiResponse
+D:\Repository\JINSUNG\safert-road-inclass\src\main\java\com\jinsung\safety_road_inclass\domain\ai\service\GeminiService.java:93: error: cannot find symbol
+                usageMetadata.setCandidatesTokenCount(response.getUsageMetadata().getCandidatesTokenCount());
+                                                              ^
+  symbol:   method getUsageMetadata()
+  location: variable response of type GeminiResponse
+100 errors
+only showing the first 100 errors, of 786 total; use -Xmaxerrs if you would like to see more
+
+> Task :compileJava FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --info option to get more log output.
+> Run with --scan to get full insights.
+
+BUILD FAILED in 12s
+1 actionable task: 1 executed

@@ -33,6 +33,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
     USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "U002", "이미 존재하는 사용자입니다."),
     USER_INVALID_ROLE(HttpStatus.BAD_REQUEST, "U003", "유효하지 않은 역할입니다."),
+    USER_NOT_VERIFIED(HttpStatus.FORBIDDEN, "U004", "본인 인증이 필요한 계정입니다."),
 
     // ===== Template (템플릿) =====
     TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "T001", "템플릿을 찾을 수 없습니다."),
@@ -97,7 +98,14 @@ public enum ErrorCode {
     // ===== Reward (보상) =====
     REWARD_NOT_FOUND(HttpStatus.NOT_FOUND, "RW001", "보상을 찾을 수 없습니다."),
     REWARD_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "RW002", "현재 교환 불가능한 보상입니다."),
-    REWARD_OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "RW003", "보상이 품절되었습니다.");
+    REWARD_OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "RW003", "보상이 품절되었습니다."),
+    REWARD_ALREADY_CLAIMED(HttpStatus.CONFLICT, "RW004", "이미 수령한 보상입니다."),
+
+    // ===== Inventory (인벤토리) =====
+    INVENTORY_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "INV001", "인벤토리 아이템을 찾을 수 없습니다."),
+    BOX_NOT_FOUND(HttpStatus.NOT_FOUND, "INV002", "상자를 찾을 수 없습니다."),
+    BOX_ALREADY_OPENED(HttpStatus.CONFLICT, "INV003", "이미 열린 상자입니다."),
+    BOX_NO_REWARDS(HttpStatus.BAD_REQUEST, "INV004", "상자에 보상이 정의되지 않았습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
