@@ -1,129 +1,109 @@
-# Safety Road (안전의 길) Backend Service
+﻿# Safety Road Backend (`safert-road-inclass`)
 
-산업 현장의 안전 관리를 디지털화하여 체크리스트 기반의 효율적인 안전 점검 시스템을 제공하는 백엔드 서비스입니다.
-법정 자율점검표(사다리/고소/밀폐)의 전산화와 AI 기반 위험 분석을 지원하며, 견고한 데이터 무결성과 안정적인 트랜잭션 처리를 보장합니다.
+안전의 길 서비스의 Spring Boot 백엔드입니다.
+인증/JWT, 체크리스트, 위험도 평가, 포인트/골드/보상, 인벤토리, 출석, 알림, Gemini 기반 AI 분석 API를 제공합니다.
 
-## 🏗 Project Architecture
+## 기술 스택
 
-### Core Technology Stack
-- **Language**: Java 17 (LTS)
-- **Framework**: Spring Boot 3.x
-- **Build Tool**: Gradle 8.x (Groovy DSL)
-- **Database**: MySQL 8.x
-- **ORM**: Spring Data JPA
-- **Security**: Spring Security + JWT
-- **API Specs**: OpenAPI 3.0 (Swagger)
+- Language: Java 21
+- Framework: Spring Boot 3.3.6
+- Build: Gradle 8 (Wrapper 포함)
+- ORM: Spring Data JPA
+- Security: Spring Security + JWT
+- API Docs: springdoc-openapi (Swagger UI)
+- AI: Spring AI Vertex Gemini + Legacy Gemini 호출 호환
+- DB
+- 개발(`dev`): SQLite (`./data/safetyroad-dev.db`)
+- 운영(`prod`): PostgreSQL (Supabase)
 
-### Layered Architecture
-프로젝트는 **Layered Architecture** 패턴을 엄격히 준수합니다.
-- **Controller Layer** (`api`): 요청 검증, 서비스 호출, DTO 변환
-- **Service Layer** (`service/domain`): 비즈니스 로직, 트랜잭션 관리
-- **Repository Layer** (`repository`): 데이터 액세스 (JPA)
-- **Infrastructure Layer** (`infra`): 외부 시스템 연동 (S3, AI API)
+## 실행 환경
 
----
+### 요구사항
 
-## 🚀 Key Features (MVP)
+- JDK 21
+- Gradle Wrapper 사용 권장(`gradlew`/`gradlew.bat`)
 
-1.  **Authentication & RBAC**
-    *   JWT 기반 인증 시스템
-    *   역할별 권한 관리 (기술인, 관리감독자, 안전관리자)
+### 실행
 
-2.  **Digital Checklist System**
-    *   작업 유형별(사다리, 고소작업 등) 템플릿 로딩
-    *   체크리스트 작성, 임시 저장, 최종 제출 및 승인 워크플로우
-
-3.  **Risk Management & Analysis**
-    *   '아니요' 응답 항목에 대한 위험도 자동 평가
-    *   Python 기반 AI 분석 모듈 연동 (위험도 예측)
-
-4.  **Action Tracking**
-    *   부적합 항목에 대한 조치 내역(텍스트, 사진) 기록
-    *   AWS S3를 이용한 안전 점검 이미지 스토리지
-
----
-
-## 🛠 Environment Setup & Build
-
-### Prerequisites
-- **JDK**: OpenJDK 21 (프로젝트는 Java 17 문법 호환)
-- **Database**: MySQL 8.x
-- **IDE**: VS Code or IntelliJ IDEA (with Lombok plugin)
-
-### Local Development Setup
-1. **Repository Clone**
-   ```bash
-   git clone https://github.com/kingdom711/safert-road-inclass.git
-   cd safert-road-inclass
-   ```
-
-2. **Database Configuration**
-   - MySQL 실행 및 데이터베이스 생성
-   ```sql
-   CREATE DATABASE safety_road CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-   - `src/main/resources/application.properties` (또는 `application-local.yml`) 설정
-   ```properties
-   spring.datasource.url=jdbc:mysql://localhost:3306/safety_road
-   spring.datasource.username={YOUR_USERNAME}
-   spring.datasource.password={YOUR_PASSWORD}
-   ```
-
-3. **Build & Run**
-   ```bash
-   # Build
-   ./gradlew clean build
-
-   # Run
-   ./gradlew bootRun
-   ```
-
----
-
-## 📂 Project Structure
-
-```
-src/main/java/com/jinsung/safety_road_inclass/
-├── common/            # Global Configs, Exceptions, Utils
-├── domain/            # Domain Entities & Business Logic
-│   ├── auth/          # User, Role, Token
-│   ├── checklist/     # Template, Instance, Item
-│   ├── risk/          # Risk Assessment
-│   └── action/        # Action Records
-├── api/               # Rest Controllers (Web Layer)
-└── infra/             # External Integrations (S3, AI)
+```bash
+cd safert-road-inclass
+./gradlew bootRun
 ```
 
+Windows:
+
+```bat
+cd safert-road-inclass
+gradlew.bat bootRun
+```
+
+기본 포트: `8080` (`PORT` 환경변수로 오버라이드 가능)
+
+## 프로파일/설정
+
+- 기본 활성 프로파일: `dev` (`SPRING_PROFILES_ACTIVE`로 변경)
+- 공통 설정: `src/main/resources/application.properties`
+- 개발 설정: `src/main/resources/application-dev.properties`
+- 운영 설정: `src/main/resources/application-prod.properties`
+
+주요 환경변수:
+
+- `SPRING_PROFILES_ACTIVE`: `dev` 또는 `prod`
+- `PORT`: 서버 포트
+- `CORS_ALLOWED_ORIGINS`: 허용 Origin 목록
+- `GEMINI_API_KEY`: Gemini API Key
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`: Supabase 스토리지 연동
+
+## 주요 API 그룹
+
+- 인증: `/api/v1/auth/*`
+- 건강 체크: `/api/v1/health/*`
+- 체크리스트: `/api/v1/checklists/*`
+- 템플릿: `/api/v1/templates/*`
+- 위험도/조치: `/api/v1/risks/*`, `/api/v1/reviews/*`
+- 포인트/활동: `/api/v1/users/me/points/*`, `/api/v1/users/me/activities`
+- 출석/보상: `/api/v1/quests/attendance/*`, `/api/v1/attendance/rewards/*`
+- 인벤토리: `/api/v1/inventory/*`
+- 골드/교환/보상센터: `/api/v1/gold/*`, `/api/v1/exchange/*`, `/api/v1/rewards/*`
+- 게임 프로필: `/api/v1/game-profile/me/*`
+- 알림: `/api/v1/alerts/*`
+- AI: `/api/v1/ai/*`, `/api/v1/business-plan/*`
+- 파일: `/api/v1/files/*`
+
+Swagger UI:
+
+- `http://localhost:8080/swagger-ui`
+
+## 프로젝트 구조
+
+```text
+safert-road-inclass/
+├─ src/main/java/com/jinsung/safety_road_inclass/
+│  ├─ domain/         # 도메인별 controller/service/repository/entity
+│  └─ global/         # 보안, 공통 응답, 예외, 설정
+├─ src/main/resources/
+│  ├─ application.properties
+│  ├─ application-dev.properties
+│  └─ application-prod.properties
+├─ sql/               # 스키마/데이터 SQL
+└─ build.gradle
+```
+
+## 보안/인증 참고
+
+- JWT 기반 Stateless 인증
+- CORS 허용 Origin은 설정 파일/환경변수에서 관리
+- 일부 엔드포인트는 현재 프론트 연동 단계 특성상 `permitAll` 설정 포함 (SecurityConfig 참조)
+
+## 참고 문서
+
+- `safert-road-inclass/docs/API_SPECIFICATION.md`
+- `safert-road-inclass/docs/BACKEND_INTEGRATION_GUIDE.md`
+- `safert-road-inclass/docs/CLOUDTYPE_DEPLOYMENT.md`
+- `safert-road-inclass/docs/database.md`
+- `safert-road-inclass/docs/백엔드_진행현황.md`
+
 ---
 
-## 📏 Development Guidelines
-
-### Branch Strategy (Git Flow)
-- `master`: 배포 가능한 안정 버전
-- `develop`: 개발 중인 버전
-- `feature/{feature-name}`: 기능 개발 브랜치
-
-### Code Convention
-- **Naming**: Class(PascalCase), Method(camelCase), DB Tables(snake_case)
-- **Response Format**: 모든 API는 표준 응답 포맷을 준수합니다.
-  ```json
-  {
-    "status": "success",
-    "code": 200,
-    "message": "Operation successful",
-    "data": { ... }
-  }
-  ```
-- **Commit Message**: Conventional Commits 준수 (e.g., `feat: add login api`, `fix: resolve jwt timeout`)
-
----
-
-## 📝 API Documentation
-서버 실행 후 아래 주소에서 API 문서를 확인할 수 있습니다.
-- **Swagger UI**: `http://localhost:8080/swagger-ui/index.html`
-
----
-
-## 📞 Contact & Support
-- **Repository**: [GitHub Link](https://github.com/kingdom711/safert-road-inclass)
+최종 업데이트: 2026-02-13
 
