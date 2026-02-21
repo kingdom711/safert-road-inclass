@@ -42,8 +42,8 @@ class DocumentEnhancementServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getEnhancedContent()).isNotNull();
         assertThat(result.getEnhancedContent()).contains(draftContent);
-        // Mock 구현에서는 "[임시] " 접두어가 추가됨
-        assertThat(result.getEnhancedContent()).startsWith("[임시] ");
+        // ChatModel 미주입 환경에서는 "[Fallback] " 접두어가 추가됨
+        assertThat(result.getEnhancedContent()).startsWith("[Fallback] ");
         
         // Mock 구현에서는 토큰이 0으로 반환됨
         assertThat(result.getPromptTokens()).isEqualTo(0);

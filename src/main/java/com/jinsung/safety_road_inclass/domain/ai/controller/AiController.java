@@ -55,7 +55,7 @@ public class AiController {
 
     @Operation(
         summary = "이미지 기반 위험 분석", 
-        description = "업로드된 작업 사진을 AI가 분석하여 위험 요소를 감지합니다. (현재 Mock 데이터 반환)"
+        description = "업로드된 작업 사진을 Gemini Vision이 분석하여 위험 요소를 감지합니다."
     )
     @PostMapping(value = "/analyze-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<AiPhotoAnalysisResponse> analyzePhoto(

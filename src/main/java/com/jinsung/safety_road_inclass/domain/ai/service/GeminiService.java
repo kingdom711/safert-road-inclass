@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,6 +56,32 @@ public class GeminiService {
 
             반드시 위 4가지 필드만 JSON 형식으로 응답하세요. 다른 텍스트 없이 순수 JSON만 반환하세요.
             """;
+
+    private static final String VISION_PROMPT = """
+            당신은 건설/산업 현장 안전 전문가입니다. 제공된 사진을 분석하여 위험 요소를 식별하세요.
+
+            배관 구경에 따른 질식 위험 및 훅업(Hook-up) 작업 관련 요소는 분석 대상에서 제외합니다.
+
+            [응답 형식 - 반드시 JSON으로 응답]
+            {
+                "riskFactor": "핵심 위험 요소 설명",
+                "riskLevel": "CRITICAL|HIGH|MEDIUM|LOW",
+                "remediationSteps": ["조치1", "조치2", "조치3"],
+                "referenceCode": "KOSHA-X-XXXX-XX"
+            }
+
+            [KOSHA 참조 코드]
+            - KOSHA-G-2023-01: 고소작업 + 안전대
+            - KOSHA-M-2023-05: 화기작업 + 화재예방
+            - KOSHA-P-2023-12: 개인보호구
+            - KOSHA-C-2023-08: 가설구조물
+            - KOSHA-S-2023-03: 밀폐공간
+            - KOSHA-E-2023-07: 전기안전
+            - KOSHA-L-2023-11: 중량물/크레인
+            - KOSHA-F-2023-04: 화재예방/용접
+            """;
+
+    private static final Set<String> EXCLUDED_KEYWORDS = Set.of("훅업", "hook-up", "배관 구경");
 
     public GeminiService(@Qualifier("geminiRestTemplate") RestTemplate restTemplate,
             GeminiConfig geminiConfig,
@@ -104,6 +132,53 @@ public class GeminiService {
     }
 
     /**
+     * 이미지 기반 위험 분석 (Gemini Vision)
+     */
+    public GeminiAnalysisResult analyzeImage(byte[] imageBytes, String mimeType) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new IllegalArgumentException("이미지 데이터가 비어있습니다.");
+        }
+
+        String safeMimeType = (mimeType == null || mimeType.isBlank()) ? "image/jpeg" : mimeType;
+        String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+
+        GeminiRequest request = GeminiRequest.builder()
+                .contents(List.of(
+                        GeminiRequest.Content.builder()
+                                .role("user")
+                                .parts(List.of(
+                                        GeminiRequest.Part.fromText(VISION_PROMPT),
+                                        GeminiRequest.Part.fromImage(safeMimeType, base64Image)))
+                                .build()))
+                .generationConfig(GeminiRequest.GenerationConfig.builder()
+                        .temperature(0.2)
+                        .maxOutputTokens(1024)
+                        .topP(0.95)
+                        .topK(40)
+                        .build())
+                .build();
+
+        try {
+            GeminiResponse response = callGeminiApi(request);
+            GeminiAnalysisResult result = parseGeminiResponse(response);
+
+            if (response.getUsageMetadata() != null) {
+                GeminiAnalysisResult.UsageMetadata usage = new GeminiAnalysisResult.UsageMetadata();
+                usage.setPromptTokenCount(response.getUsageMetadata().getPromptTokenCount());
+                usage.setCandidatesTokenCount(response.getUsageMetadata().getCandidatesTokenCount());
+                usage.setTotalTokenCount(response.getUsageMetadata().getTotalTokenCount());
+                result.setUsageMetadata(usage);
+            }
+
+            applyExclusionFilter(result);
+            return result;
+        } catch (Exception e) {
+            log.error("[Gemini Vision 오류] 이미지 분석 실패, Fallback 응답 반환: {}", e.getMessage());
+            return createFallbackResponse("사진 기반 위험 상황");
+        }
+    }
+
+    /**
      * 사용자 프롬프트 생성
      */
     private String buildUserPrompt(String situationText, String workType,
@@ -134,7 +209,13 @@ public class GeminiService {
     private GeminiResponse callGeminiApi(String userPrompt) {
         // 요청 생성
         GeminiRequest request = GeminiRequest.fromPrompt(SYSTEM_PROMPT, userPrompt);
+        return callGeminiApi(request);
+    }
 
+    /**
+     * Gemini API 호출
+     */
+    private GeminiResponse callGeminiApi(GeminiRequest request) {
         // HTTP 헤더 설정
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -286,5 +367,35 @@ public class GeminiService {
         }
 
         return fallback;
+    }
+
+    /**
+     * 분석 제외 대상 키워드가 응답에 포함되면 일반 안전 권고로 정규화
+     */
+    private void applyExclusionFilter(GeminiAnalysisResult result) {
+        if (result == null) {
+            return;
+        }
+
+        String mergedText = String.join(" ",
+                result.getRiskFactor() != null ? result.getRiskFactor().toLowerCase() : "",
+                result.getReferenceCode() != null ? result.getReferenceCode().toLowerCase() : "",
+                result.getRemediationSteps() != null ? String.join(" ", result.getRemediationSteps()).toLowerCase() : "");
+
+        boolean containsExcluded = EXCLUDED_KEYWORDS.stream()
+                .map(String::toLowerCase)
+                .anyMatch(mergedText::contains);
+
+        if (containsExcluded) {
+            log.info("[Gemini Vision] 제외 대상 키워드 감지 - 응답 정규화");
+            result.setRiskFactor("제외 대상 요소를 제외하고 일반 안전 위험 요소를 재분석했습니다.");
+            result.setRiskLevel("MEDIUM");
+            result.setReferenceCode("KOSHA-P-2023-12");
+            result.setRemediationSteps(List.of(
+                    "작업 구역 주변의 기본 안전수칙 준수 여부를 점검하십시오.",
+                    "개인보호구 착용 상태를 확인하십시오.",
+                    "현장 안전관리자에게 추가 점검을 요청하십시오."
+            ));
+        }
     }
 }

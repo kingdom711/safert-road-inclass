@@ -6,12 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -127,6 +129,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 필수 multipart 파트 누락
+     */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingPart(
+            MissingServletRequestPartException e, HttpServletRequest request) {
+
+        String message = String.format("필수 파트 '%s'가 누락되었습니다.", e.getRequestPartName());
+        log.warn("Missing multipart part: {} [{}]", message, request.getRequestURI());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(
+                        ErrorCode.MISSING_PARAMETER.getCode(),
+                        message
+                ));
+    }
+
+    /**
      * 404 Not Found (핸들러 없음)
      */
     @ExceptionHandler(NoHandlerFoundException.class)
@@ -159,6 +179,23 @@ public class GlobalExceptionHandler {
                 ErrorCode.METHOD_NOT_ALLOWED.getCode(),
                 String.format("'%s' 메서드는 지원하지 않습니다.", e.getMethod())
             ));
+    }
+
+    /**
+     * 지원하지 않는 Content-Type
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
+
+        log.warn("Unsupported media type: {} [{}]", e.getMessage(), request.getRequestURI());
+
+        return ResponseEntity
+                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ApiResponse.error(
+                        ErrorCode.INVALID_TYPE.getCode(),
+                        "지원하지 않는 Content-Type 입니다."
+                ));
     }
 
     /**

@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -27,6 +28,9 @@ class AiAnalysisServiceTest {
 
     @Mock
     private DocumentEnhancementService documentEnhancementService;
+
+    @Mock
+    private GeminiService geminiService;
 
     @InjectMocks
     private AiAnalysisService aiAnalysisService;
@@ -52,7 +56,7 @@ class AiAnalysisServiceTest {
             .totalTokens(80)
             .build();
 
-        when(documentEnhancementService.enhanceDocument(anyString()))
+        when(documentEnhancementService.enhanceDocument(any()))
             .thenReturn(enhancementResult);
 
         // When
@@ -98,7 +102,7 @@ class AiAnalysisServiceTest {
             .totalTokens(300)
             .build();
 
-        when(documentEnhancementService.enhanceDocument(anyString()))
+        when(documentEnhancementService.enhanceDocument(any()))
             .thenReturn(enhancementResult);
 
         // When
@@ -126,7 +130,7 @@ class AiAnalysisServiceTest {
             .totalTokens(0)
             .build();
 
-        when(documentEnhancementService.enhanceDocument(anyString()))
+        when(documentEnhancementService.enhanceDocument(any()))
             .thenReturn(enhancementResult);
 
         // When

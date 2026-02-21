@@ -105,7 +105,13 @@ public enum ErrorCode {
     INVENTORY_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "INV001", "인벤토리 아이템을 찾을 수 없습니다."),
     BOX_NOT_FOUND(HttpStatus.NOT_FOUND, "INV002", "상자를 찾을 수 없습니다."),
     BOX_ALREADY_OPENED(HttpStatus.CONFLICT, "INV003", "이미 열린 상자입니다."),
-    BOX_NO_REWARDS(HttpStatus.BAD_REQUEST, "INV004", "상자에 보상이 정의되지 않았습니다.");
+    BOX_NO_REWARDS(HttpStatus.BAD_REQUEST, "INV004", "상자에 보상이 정의되지 않았습니다."),
+
+    // ===== Hazard Cycle (위험 사이클) =====
+    HAZARD_CYCLE_NOT_FOUND(HttpStatus.NOT_FOUND, "HC001", "Hazard Cycle을 찾을 수 없습니다."),
+    HAZARD_CYCLE_ALREADY_COMPLETED(HttpStatus.CONFLICT, "HC002", "이미 조치 완료된 Hazard Cycle입니다."),
+    HAZARD_CYCLE_FORBIDDEN(HttpStatus.FORBIDDEN, "HC003", "해당 Hazard Cycle에 접근 권한이 없습니다."),
+    HAZARD_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "HC004", "일일 Hazard Cycle 생성 한도를 초과했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

@@ -45,6 +45,32 @@ public class GeminiRequest {
     @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     public static class Part {
         private String text;
+        private InlineData inlineData;
+
+        public static Part fromText(String text) {
+            return Part.builder()
+                    .text(text)
+                    .build();
+        }
+
+        public static Part fromImage(String mimeType, String base64Data) {
+            return Part.builder()
+                    .inlineData(InlineData.builder()
+                            .mimeType(mimeType)
+                            .data(base64Data)
+                            .build())
+                    .build();
+        }
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    public static class InlineData {
+        private String mimeType;
+        private String data;
     }
 
     @Getter
@@ -68,7 +94,7 @@ public class GeminiRequest {
                         Content.builder()
                                 .role("user")
                                 .parts(List.of(
-                                        Part.builder().text(systemPrompt + "\n\n" + userPrompt).build()))
+                                        Part.fromText(systemPrompt + "\n\n" + userPrompt)))
                                 .build()))
                 .generationConfig(GenerationConfig.builder()
                         .temperature(0.7)

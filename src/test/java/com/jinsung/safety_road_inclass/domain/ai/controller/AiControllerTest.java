@@ -5,11 +5,12 @@ import com.jinsung.safety_road_inclass.domain.ai.dto.AiAnalysisRequest;
 import com.jinsung.safety_road_inclass.domain.ai.dto.AiAnalysisResponse;
 import com.jinsung.safety_road_inclass.domain.ai.dto.AiPhotoAnalysisResponse;
 import com.jinsung.safety_road_inclass.domain.ai.service.AiAnalysisService;
-import com.jinsung.safety_road_inclass.global.common.ApiResponse;
+import com.jinsung.safety_road_inclass.domain.auth.service.JwtAuthenticationFilter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -28,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * AiController 통합 테스트
  */
 @WebMvcTest(AiController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @DisplayName("AiController 통합 테스트")
 class AiControllerTest {
 
@@ -39,6 +41,9 @@ class AiControllerTest {
 
     @MockBean
     private AiAnalysisService aiAnalysisService;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @BeforeEach
     void setUp() {

@@ -3,6 +3,7 @@ package com.jinsung.safety_road_inclass.domain.ai.service;
 import com.jinsung.safety_road_inclass.domain.ai.dto.AiAnalysisRequest;
 import com.jinsung.safety_road_inclass.domain.ai.dto.AiAnalysisResponse;
 import com.jinsung.safety_road_inclass.domain.ai.dto.AiPhotoAnalysisResponse;
+import com.jinsung.safety_road_inclass.domain.ai.dto.gemini.GeminiAnalysisResult;
 import com.jinsung.safety_road_inclass.domain.ai.service.DocumentEnhancementService.DocumentEnhancementResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * AI 분석 서비스
@@ -23,6 +26,7 @@ import java.util.List;
 public class AiAnalysisService {
 
     private final DocumentEnhancementService documentEnhancementService;
+    private final GeminiService geminiService;
 
     /**
      * 텍스트 기반 문서 보강 (Spring AI ChatModel 연동)
@@ -114,29 +118,54 @@ public class AiAnalysisService {
     }
 
     /**
-     * 이미지 기반 위험 분석 (Mock)
+     * 이미지 기반 위험 분석 (Gemini Vision)
      */
     public AiPhotoAnalysisResponse analyzePhoto(byte[] imageData, String filename) {
         log.info("[AI 이미지 분석 요청] filename={}, size={}bytes", filename, imageData != null ? imageData.length : 0);
 
-        // Mock 응답 데이터 생성
+        String mimeType = guessMimeType(filename);
+        GeminiAnalysisResult result = geminiService.analyzeImage(imageData, mimeType);
+
+        List<String> detectedIssues = new ArrayList<>();
+        if (result.getRiskFactor() != null && !result.getRiskFactor().isBlank()) {
+            detectedIssues.add(result.getRiskFactor());
+        }
+        if (result.getRemediationSteps() != null && !result.getRemediationSteps().isEmpty()) {
+            detectedIssues.addAll(result.getRemediationSteps());
+        }
+
+        Set<String> tags = new LinkedHashSet<>();
+        tags.add("AI_VISION");
+        if (result.getReferenceCode() != null && !result.getReferenceCode().isBlank()) {
+            tags.add(result.getReferenceCode());
+        }
+
         return AiPhotoAnalysisResponse.builder()
-                .riskLevel("MEDIUM")
-                .detectedIssues(List.of(
-                    "[Mock] 사다리 고정 상태 불안정",
-                    "[Mock] 작업 구역 조명 부족",
-                    "[Mock] 안전 표지판 미설치"
-                ))
-                .tags(List.of(
-                    "고소작업",
-                    "야간작업", 
-                    "철골작업",
-                    "2층_비계"
-                ))
-                .analysisSource("MOCK_DATA (Gemini Vision API 연동 예정)")
+                .riskLevel(result.getRiskLevel())
+                .detectedIssues(detectedIssues)
+                .tags(new ArrayList<>(tags))
+                .analysisSource("Gemini Vision API")
                 .analyzedAt(LocalDateTime.now())
-                .message("✅ 백엔드 AI 이미지 분석 API 호출 성공! 현재 Mock 데이터가 반환되고 있습니다.")
+                .message("✅ Gemini Vision 기반 이미지 분석이 완료되었습니다.")
                 .build();
+    }
+
+    private String guessMimeType(String filename) {
+        if (filename == null) {
+            return "image/jpeg";
+        }
+
+        String lower = filename.toLowerCase();
+        if (lower.endsWith(".png")) {
+            return "image/png";
+        }
+        if (lower.endsWith(".webp")) {
+            return "image/webp";
+        }
+        if (lower.endsWith(".gif")) {
+            return "image/gif";
+        }
+        return "image/jpeg";
     }
 }
 

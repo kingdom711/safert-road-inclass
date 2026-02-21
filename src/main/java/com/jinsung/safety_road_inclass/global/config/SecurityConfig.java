@@ -75,6 +75,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/v1/reviews/**")
                                                 .hasAnyRole("SUPERVISOR", "SAFETY_MANAGER", "ADMIN")
                                                 .requestMatchers("/api/v1/admin/**").hasAnyRole("SAFETY_MANAGER", "ADMIN")
+                                                .requestMatchers("/api/v1/hazard-cycles/**").authenticated()
 
                                                 // 그 외 모든 요청은 인증 필요
                                                 .anyRequest().authenticated())
