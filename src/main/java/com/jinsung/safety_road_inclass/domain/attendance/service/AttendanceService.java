@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -34,6 +35,7 @@ public class AttendanceService {
     private static final int BASE_POINTS = 10;
     private static final int BONUS_POINTS = 5;
     private static final int BONUS_STREAK_THRESHOLD = 7;
+    private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final UserStreakRepository userStreakRepository;
@@ -47,7 +49,7 @@ public class AttendanceService {
      */
     @Transactional
     public CheckInResponse checkIn(Long userId) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KST_ZONE);
 
         // 1. 오늘 이미 출석했는지 확인
         if (attendanceRecordRepository.existsByUserIdAndCheckInDate(userId, today)) {
