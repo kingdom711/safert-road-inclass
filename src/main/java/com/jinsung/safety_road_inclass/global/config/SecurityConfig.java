@@ -77,6 +77,13 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/v1/admin/**").hasAnyRole("SAFETY_MANAGER", "ADMIN")
                                                 .requestMatchers("/api/v1/hazard-cycles/**").authenticated()
 
+                                                // 작업중지권 - 모든 인증된 사용자 (산업안전보건법 제52조)
+                                                .requestMatchers("/api/v1/work-stop-reports/**").authenticated()
+
+                                                // 컴플라이언스 리포트 - 관리자급만 접근
+                                                .requestMatchers("/api/v1/compliance-reports/**")
+                                                .hasAnyRole("SUPERVISOR", "SAFETY_MANAGER", "ADMIN")
+
                                                 // 그 외 모든 요청은 인증 필요
                                                 .anyRequest().authenticated())
 

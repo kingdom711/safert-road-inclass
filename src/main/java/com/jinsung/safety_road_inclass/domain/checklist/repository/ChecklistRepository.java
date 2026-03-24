@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,5 +56,10 @@ public interface ChecklistRepository extends JpaRepository<Checklist, Long> {
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate
     );
+
+    // ─── 컴플라이언스 리포트용 ──────────────────────────────────────
+
+    /** 기간별 제출 건수 */
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }
 

@@ -111,7 +111,16 @@ public enum ErrorCode {
     HAZARD_CYCLE_NOT_FOUND(HttpStatus.NOT_FOUND, "HC001", "Hazard Cycle을 찾을 수 없습니다."),
     HAZARD_CYCLE_ALREADY_COMPLETED(HttpStatus.CONFLICT, "HC002", "이미 조치 완료된 Hazard Cycle입니다."),
     HAZARD_CYCLE_FORBIDDEN(HttpStatus.FORBIDDEN, "HC003", "해당 Hazard Cycle에 접근 권한이 없습니다."),
-    HAZARD_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "HC004", "일일 Hazard Cycle 생성 한도를 초과했습니다.");
+    HAZARD_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "HC004", "일일 Hazard Cycle 생성 한도를 초과했습니다."),
+
+    // ===== WorkStop (작업중지권 — 중대재해처벌법 증거) =====
+    WORK_STOP_NOT_FOUND(HttpStatus.NOT_FOUND, "WS001", "작업중지 신고를 찾을 수 없습니다."),
+    WORK_STOP_INVALID_STATUS(HttpStatus.BAD_REQUEST, "WS002", "유효하지 않은 작업중지 상태입니다."),
+    WORK_STOP_PROTECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "WS003", "보호 기간 정보를 찾을 수 없습니다."),
+
+    // ===== Compliance (컴플라이언스 리포트 — 중대재해처벌법 증거) =====
+    COMPLIANCE_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "CP001", "컴플라이언스 리포트를 찾을 수 없습니다."),
+    COMPLIANCE_REPORT_ALREADY_EXISTS(HttpStatus.CONFLICT, "CP002", "해당 연월의 리포트가 이미 존재합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

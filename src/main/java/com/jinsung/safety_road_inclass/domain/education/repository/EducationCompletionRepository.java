@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,4 +44,20 @@ public interface EducationCompletionRepository extends JpaRepository<EducationCo
      */
     @Query("SELECT COUNT(e) FROM EducationCompletion e WHERE e.user.id = :userId AND e.educationId = :educationId")
     int countAttemptsByUserIdAndEducationId(@Param("userId") Long userId, @Param("educationId") String educationId);
+
+    // ─── 컴플라이언스 리포트 / 증거자료 조회용 ──────────────────────
+
+    /** 기간별 전체 이수 기록 조회 */
+    @Query("SELECT e FROM EducationCompletion e WHERE e.completedAt BETWEEN :start AND :end ORDER BY e.completedAt DESC")
+    List<EducationCompletion> findByPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 기간별 이수 건수 */
+    long countByCompletedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    /** 기간별 합격 건수 */
+    long countByCompletedAtBetweenAndQuizPassed(LocalDateTime start, LocalDateTime end, boolean quizPassed);
+
+    /** 기간별 고유 이수자 수 */
+    @Query("SELECT COUNT(DISTINCT e.user.id) FROM EducationCompletion e WHERE e.completedAt BETWEEN :start AND :end AND e.quizPassed = true")
+    long countDistinctPassedUsersByPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

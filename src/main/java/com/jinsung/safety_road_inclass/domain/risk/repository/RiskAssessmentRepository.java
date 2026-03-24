@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,5 +55,13 @@ public interface RiskAssessmentRepository extends JpaRepository<RiskAssessment, 
            "LEFT JOIN FETCH ra.countermeasures " +
            "WHERE ra.id = :id")
     Optional<RiskAssessment> findByIdWithDetails(@Param("id") Long id);
+
+    // ─── 컴플라이언스 리포트용 ──────────────────────────────────────
+
+    /** 기간별 평가 건수 */
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    /** 기간별 특정 위험 레벨 건수 */
+    long countByCreatedAtBetweenAndRiskLevel(LocalDateTime start, LocalDateTime end, RiskLevel riskLevel);
 }
 

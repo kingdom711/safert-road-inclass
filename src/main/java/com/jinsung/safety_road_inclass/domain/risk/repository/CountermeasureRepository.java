@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -46,5 +47,11 @@ public interface CountermeasureRepository extends JpaRepository<Countermeasure, 
     @Query("SELECT c.status, COUNT(c) FROM Countermeasure c " +
            "GROUP BY c.status")
     List<Object[]> countByStatus();
+
+    // ─── 컴플라이언스 리포트용 ──────────────────────────────────────
+
+    /** 기간별 완료된 대책 건수 */
+    @Query("SELECT COUNT(c) FROM Countermeasure c WHERE c.status = 'COMPLETED' AND c.createdAt BETWEEN :start AND :end")
+    long countCompletedByPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }
 
