@@ -64,6 +64,16 @@ dependencies {
 	// ULID Creator library (lexicographically sortable unique identifier)
 	implementation 'com.github.f4b6a3:ulid-creator:5.2.3'
 
+	// PDF 생성 (위험성평가표)
+	implementation 'org.apache.pdfbox:pdfbox:3.0.3'
+
+	// QR 코드 (PDF 원본 검증용)
+	implementation 'com.google.zxing:core:3.5.3'
+	implementation 'com.google.zxing:javase:3.5.3'
+
+	// Excel 생성 (월간 위험요인 개선대장)
+	implementation 'org.apache.poi:poi-ooxml:5.2.5'
+
 	// Spring AI - Google Gemini
 	// Spring AI 1.0.0 BOM을 통해 버전 관리
 	// Spring AI 1.0.0에서는 spring-ai-vertex-ai-gemini 사용

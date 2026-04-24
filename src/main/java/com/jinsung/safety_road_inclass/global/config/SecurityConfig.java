@@ -75,6 +75,8 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/v1/reviews/**")
                                                 .hasAnyRole("SUPERVISOR", "SAFETY_MANAGER", "ADMIN")
                                                 .requestMatchers("/api/v1/admin/**").hasAnyRole("SAFETY_MANAGER", "ADMIN")
+                                                // Hazard Cycle 공개 검증 엔드포인트 (QR 스캔용, 인증 불필요)
+                                                .requestMatchers("/api/v1/hazard-verify/**").permitAll()
                                                 .requestMatchers("/api/v1/hazard-cycles/**").authenticated()
 
                                                 // 작업중지권 - 모든 인증된 사용자 (산업안전보건법 제52조)

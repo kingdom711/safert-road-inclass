@@ -11,6 +11,7 @@ import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.dto.*;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.entity.*;
+import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportAckRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportPhotoRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportRepository;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
@@ -42,14 +43,18 @@ import java.util.*;
 public class HazardCycleService {
 
     private static final int DAILY_CYCLE_LIMIT = 10;
+    private static final int CACHE_TTL_DAYS = 7;
 
     private final HazardReportRepository hazardReportRepository;
     private final HazardReportPhotoRepository hazardReportPhotoRepository;
+    private final HazardReportAckRepository hazardReportAckRepository;
     private final UserRepository userRepository;
     private final GeminiService geminiService;
     private final StorageService storageService;
     private final ActivityLogService activityLogService;
     private final CycleRewardService cycleRewardService;
+    private final RiskAssessmentPdfService riskAssessmentPdfService;
+    private final HazardLogExcelService hazardLogExcelService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -147,6 +152,125 @@ public class HazardCycleService {
         validateOwnership(reporterId, report);
 
         return toResponse(report, null, null);
+    }
+
+    /**
+     * 동료 확인(peer ack)용 사이클 요약 조회 — 소유권 검증을 건너뛴다.
+     * 인증된 사용자라면 누구나 조회 가능 (AI 분석 결과 공유 목적).
+     */
+    public HazardCycleResponse getCycleSummary(Long cycleId) {
+        HazardReport report = hazardReportRepository.findById(cycleId)
+                .orElseThrow(() -> new CustomException(ErrorCode.HAZARD_CYCLE_NOT_FOUND));
+        return toResponse(report, null, null);
+    }
+
+    /**
+     * 동료 근로자 위험요인 확인 (산안법 제36조 2항 근로자 참여 증빙).
+     * 본인이 신고한 사이클은 확인 불가, 중복 확인 방지.
+     */
+    @Transactional
+    public HazardAckResponse ackHazardCycle(Long ackerId, Long cycleId, HazardAckRequest request) {
+        HazardReport report = hazardReportRepository.findById(cycleId)
+                .orElseThrow(() -> new CustomException(ErrorCode.HAZARD_CYCLE_NOT_FOUND));
+
+        if (Objects.equals(report.getReporter().getId(), ackerId)) {
+            throw new CustomException(ErrorCode.HAZARD_ACK_SELF_FORBIDDEN);
+        }
+
+        if (hazardReportAckRepository.existsByHazardReportIdAndAckerId(cycleId, ackerId)) {
+            throw new CustomException(ErrorCode.HAZARD_ACK_DUPLICATE);
+        }
+
+        User acker = userRepository.findById(ackerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        HazardReportAck ack = HazardReportAck.builder()
+                .hazardReport(report)
+                .acker(acker)
+                .comment(request != null ? request.getComment() : null)
+                .ackedAt(LocalDateTime.now())
+                .build();
+
+        ack = hazardReportAckRepository.save(ack);
+
+        activityLogService.log(
+                ackerId,
+                ActivityType.HAZARD_CYCLE_ACKED,
+                "Hazard Cycle 동료 확인",
+                "동료 근로자가 위험요인을 확인했습니다.",
+                "{\"hazardCycleId\":" + cycleId + "}");
+
+        log.info("Hazard Cycle 근로자 참여 확인: cycleId={}, ackerId={}", cycleId, ackerId);
+
+        return HazardAckResponse.builder()
+                .id(ack.getId())
+                .hazardReportId(cycleId)
+                .ackerId(ackerId)
+                .ackerName(acker.getName())
+                .comment(ack.getComment())
+                .ackedAt(ack.getAckedAt())
+                .build();
+    }
+
+    public List<HazardAckResponse> listAcks(Long cycleId) {
+        if (!hazardReportRepository.existsById(cycleId)) {
+            throw new CustomException(ErrorCode.HAZARD_CYCLE_NOT_FOUND);
+        }
+        return hazardReportAckRepository.findByHazardReportIdOrderByAckedAtAsc(cycleId).stream()
+                .map(a -> HazardAckResponse.builder()
+                        .id(a.getId())
+                        .hazardReportId(cycleId)
+                        .ackerId(a.getAcker().getId())
+                        .ackerName(a.getAcker().getName())
+                        .comment(a.getComment())
+                        .ackedAt(a.getAckedAt())
+                        .build())
+                .toList();
+    }
+
+    /**
+     * QR 검증 — 공개 엔드포인트에서 호출. certNumber 기반으로 원본 사이클의 해시/상태를 반환.
+     */
+    public HazardVerifyResponse verifyByCertNumber(String certNumber) {
+        return hazardReportRepository.findByCertNumber(certNumber)
+                .map(r -> HazardVerifyResponse.builder()
+                        .valid(r.getIntegrityHash() != null)
+                        .cycleId(r.getId())
+                        .certNumber(r.getCertNumber())
+                        .integrityHash(r.getIntegrityHash())
+                        .prevHash(r.getPrevHash())
+                        .reporterName(r.getReporter() != null ? r.getReporter().getName() : null)
+                        .reportedAt(r.getReportedAt())
+                        .riskLevel(r.getAiRiskLevel())
+                        .riskScore(r.getAiRiskScore())
+                        .status(r.getStatus() != null ? r.getStatus().name() : null)
+                        .build())
+                .orElse(HazardVerifyResponse.builder().valid(false).build());
+    }
+
+    /**
+     * 월간 위험요인 개선대장 Excel 생성 (ADMIN 전용).
+     * 고용노동부 점검관 제출용 사업장 전체 대장.
+     */
+    public byte[] renderMonthlyLogExcel(int year, int month) {
+        return hazardLogExcelService.generateMonthly(year, month);
+    }
+
+    /**
+     * 위험성평가표 PDF 생성 (고용노동부 제출용).
+     * 본인 또는 ADMIN/INSPECTOR 권한 필요.
+     */
+    public byte[] renderRiskAssessmentPdf(Long reporterId, Long cycleId) {
+        HazardReport report = hazardReportRepository.findById(cycleId)
+                .orElseThrow(() -> new CustomException(ErrorCode.HAZARD_CYCLE_NOT_FOUND));
+
+        validateOwnership(reporterId, report);
+
+        if (report.getAiAnalyzedAt() == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT, "AI 분석이 완료된 사이클만 위험성평가표를 발급할 수 있습니다.");
+        }
+
+        return riskAssessmentPdfService.generate(report);
     }
 
     /**
@@ -287,6 +411,16 @@ public class HazardCycleService {
 
         validateDailyLimit(reporter.getId(), reportedAt);
 
+        byte[] photoBytes;
+        try {
+            photoBytes = photo.getBytes();
+        } catch (IOException e) {
+            log.error("Hazard Cycle 사진 바이트 읽기 실패", e);
+            throw new CustomException(ErrorCode.AI_ANALYSIS_FAILED, "사진 읽기 처리에 실패했습니다.");
+        }
+
+        String photoHash = sha256Hex(photoBytes);
+
         String storedPath = storageService.store(photo);
 
         HazardReport report = HazardReport.builder()
@@ -300,31 +434,82 @@ public class HazardCycleService {
                 .syncedFromOffline(syncedFromOffline)
                 .build();
 
+        report.setPhotoSha256(photoHash);
         report = hazardReportRepository.save(report);
 
         savePhotoMetadata(report, HazardPhotoStage.HAZARD, photo, storedPath, 0);
 
         CycleRewardService.RewardGrant tier1Reward = null;
 
+        // 캐시 히트 확인: 동일 사진 해시의 최근 분석 결과 재사용
+        Optional<HazardReport> cacheHit = findCacheHit(photoHash, report.getId());
+        if (cacheHit.isPresent()) {
+            HazardReport source = cacheHit.get();
+            report.copyAiAnalysisFrom(source, LocalDateTime.now());
+            tier1Reward = cycleRewardService.awardTier1(report);
+
+            sealIntegrity(report);
+            hazardReportRepository.save(report);
+
+            activityLogService.log(
+                    reporter.getId(),
+                    ActivityType.HAZARD_CYCLE_REPORTED,
+                    "Hazard Cycle 등록(캐시)",
+                    "동일 사진 해시 재분석 — 캐시 재사용",
+                    "{\"hazardCycleId\":" + report.getId() + ",\"cacheSourceId\":" + source.getId() + "}");
+
+            log.info("Hazard Cycle 캐시 히트: cycleId={}, sourceId={}, sha256={}",
+                    report.getId(), source.getId(), photoHash.substring(0, 12));
+
+            return toResponse(report, tier1Reward, null);
+        }
+
         try {
             GeminiAnalysisResult aiResult = geminiService.analyzeImage(
-                    photo.getBytes(),
+                    photoBytes,
                     photo.getContentType());
+
+            // 서버측 일관성 보정: severity × likelihood = riskScore
+            Integer computedRiskScore = null;
+            if (aiResult.getSeverity() != null && aiResult.getSeverity().getScore() != null
+                    && aiResult.getLikelihood() != null && aiResult.getLikelihood().getScore() != null) {
+                computedRiskScore = aiResult.getSeverity().getScore() * aiResult.getLikelihood().getScore();
+            } else if (aiResult.getRiskScore() != null) {
+                computedRiskScore = aiResult.getRiskScore();
+            }
 
             report.applyAiAnalysis(
                     aiResult.getRiskLevel(),
                     aiResult.getRiskFactor(),
                     toJson(aiResult.getRemediationSteps()),
-                    aiResult.getReferenceCode(),
+                    aiResult.getReferenceCode() != null ? aiResult.getReferenceCode() : aiResult.getKoshaGuide(),
                     aiResult.getUsageMetadata() != null ? aiResult.getUsageMetadata().getTotalTokenCount() : null,
                     LocalDateTime.now());
 
+            report.applyExtendedAnalysis(
+                    aiResult.getHazardClassification(),
+                    aiResult.getUnsafeCondition(),
+                    aiResult.getUnsafeAct(),
+                    aiResult.getPossibleAccident(),
+                    aiResult.getSeverity() != null ? aiResult.getSeverity().getScore() : null,
+                    aiResult.getSeverity() != null ? aiResult.getSeverity().getRationale() : null,
+                    aiResult.getLikelihood() != null ? aiResult.getLikelihood().getScore() : null,
+                    aiResult.getLikelihood() != null ? aiResult.getLikelihood().getRationale() : null,
+                    computedRiskScore,
+                    serializeJson(aiResult.getLegalBasis()),
+                    aiResult.getKoshaGuide(),
+                    serializeJson(aiResult.getControlMeasures()),
+                    aiResult.getResponsibleRole(),
+                    aiResult.getDueDays(),
+                    aiResult.getConfidence());
+
             tier1Reward = cycleRewardService.awardTier1(report);
-        } catch (IOException e) {
-            log.error("Hazard Cycle AI 분석 이미지 읽기 실패: reportId={}", report.getId(), e);
+        } catch (RuntimeException e) {
+            log.error("Hazard Cycle AI 분석 실패: reportId={}", report.getId(), e);
             throw new CustomException(ErrorCode.AI_ANALYSIS_FAILED, "이미지 분석 처리에 실패했습니다.");
         }
 
+        sealIntegrity(report);
         hazardReportRepository.save(report);
 
         activityLogService.log(
@@ -364,12 +549,52 @@ public class HazardCycleService {
 
         HazardCycleResponse.AiAnalysisDetail aiAnalysis = null;
         if (report.getAiAnalyzedAt() != null) {
+            HazardCycleResponse.ScoreDetail severity = null;
+            if (report.getAiSeverityScore() != null) {
+                severity = HazardCycleResponse.ScoreDetail.builder()
+                        .score(report.getAiSeverityScore())
+                        .rationale(report.getAiSeverityRationale())
+                        .build();
+            }
+
+            HazardCycleResponse.ScoreDetail likelihood = null;
+            if (report.getAiLikelihoodScore() != null) {
+                likelihood = HazardCycleResponse.ScoreDetail.builder()
+                        .score(report.getAiLikelihoodScore())
+                        .rationale(report.getAiLikelihoodRationale())
+                        .build();
+            }
+
+            List<HazardCycleResponse.LegalReference> legalBasis =
+                    deserializeJson(report.getAiLegalBasisJson(),
+                            new TypeReference<List<HazardCycleResponse.LegalReference>>() {
+                            });
+
+            HazardCycleResponse.ControlMeasures controlMeasures =
+                    deserializeJson(report.getAiControlMeasuresJson(),
+                            new TypeReference<HazardCycleResponse.ControlMeasures>() {
+                            });
+
             aiAnalysis = HazardCycleResponse.AiAnalysisDetail.builder()
                     .riskLevel(report.getAiRiskLevel())
                     .riskFactor(report.getAiRiskFactor())
                     .remediationSteps(parseSteps(report.getAiRemediationSteps()))
                     .referenceCode(report.getAiReferenceCode())
                     .analyzedAt(report.getAiAnalyzedAt())
+                    .hazardClassification(report.getAiHazardClassification())
+                    .unsafeCondition(report.getAiUnsafeCondition())
+                    .unsafeAct(report.getAiUnsafeAct())
+                    .possibleAccident(report.getAiPossibleAccident())
+                    .severity(severity)
+                    .likelihood(likelihood)
+                    .riskScore(report.getAiRiskScore())
+                    .legalBasis(legalBasis)
+                    .koshaGuide(report.getAiKoshaGuide())
+                    .controlMeasures(controlMeasures)
+                    .responsibleRole(report.getAiResponsibleRole())
+                    .dueDays(report.getAiDueDays())
+                    .confidence(report.getAiConfidence())
+                    .cacheSourceId(report.getAiCacheSourceId())
                     .build();
         }
 
@@ -451,6 +676,100 @@ public class HazardCycleService {
             return objectMapper.writeValueAsString(steps);
         } catch (JsonProcessingException e) {
             log.warn("조치 단계 JSON 직렬화 실패", e);
+            return null;
+        }
+    }
+
+    private String serializeJson(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof List<?> list && list.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            log.warn("위험성평가 필드 JSON 직렬화 실패", e);
+            return null;
+        }
+    }
+
+    /**
+     * 무결성 해시체인 봉인.
+     * - cert_number: UUID
+     * - prev_hash: 직전 봉인된 사이클의 integrity_hash (없으면 "genesis")
+     * - integrity_hash: SHA-256(cycleId | reporterId | reportedAt | aiFields | photoSha256 | prevHash)
+     *
+     * 이미 봉인된 경우 재계산하지 않는다.
+     */
+    private void sealIntegrity(HazardReport report) {
+        if (report.getIntegrityHash() != null) {
+            return;
+        }
+
+        String prevHash;
+        List<HazardReport> recent = hazardReportRepository.findMostRecentSealed(
+                org.springframework.data.domain.PageRequest.of(0, 1));
+        if (recent.isEmpty() || Objects.equals(recent.get(0).getId(), report.getId())) {
+            prevHash = "genesis";
+        } else {
+            prevHash = recent.get(0).getIntegrityHash();
+        }
+
+        String certNumber = java.util.UUID.randomUUID().toString();
+        String payload = String.join("|",
+                String.valueOf(report.getId()),
+                String.valueOf(report.getReporter().getId()),
+                String.valueOf(report.getReportedAt()),
+                nullToEmpty(report.getAiRiskLevel()),
+                nullToEmpty(report.getAiRiskFactor()),
+                String.valueOf(report.getAiRiskScore()),
+                nullToEmpty(report.getAiKoshaGuide()),
+                nullToEmpty(report.getPhotoSha256()),
+                prevHash);
+
+        String integrityHash = sha256Hex(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        report.sealIntegrity(certNumber, prevHash, integrityHash);
+    }
+
+    private String nullToEmpty(String s) {
+        return s == null ? "" : s;
+    }
+
+    private String sha256Hex(byte[] bytes) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(bytes);
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 알고리즘 미지원", e);
+        }
+    }
+
+    private Optional<HazardReport> findCacheHit(String photoHash, Long currentReportId) {
+        if (photoHash == null) {
+            return Optional.empty();
+        }
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(CACHE_TTL_DAYS);
+        List<HazardReport> hits = hazardReportRepository.findRecentAnalyzedByHash(photoHash, cutoff);
+        return hits.stream()
+                .filter(r -> !Objects.equals(r.getId(), currentReportId))
+                .findFirst();
+    }
+
+    private <T> T deserializeJson(String json, TypeReference<T> typeRef) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, typeRef);
+        } catch (JsonProcessingException e) {
+            log.warn("위험성평가 필드 JSON 역직렬화 실패: {}", json, e);
             return null;
         }
     }

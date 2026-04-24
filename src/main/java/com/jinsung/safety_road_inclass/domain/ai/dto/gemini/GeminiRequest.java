@@ -83,6 +83,12 @@ public class GeminiRequest {
         private Integer maxOutputTokens;
         private Double topP;
         private Integer topK;
+
+        /** Gemini 구조화 출력: "application/json" 지정 시 JSON 준수율 향상 */
+        private String responseMimeType;
+
+        /** JSON Schema 객체 (optional) — 스키마 강제로 파싱 실패율 감소 */
+        private java.util.Map<String, Object> responseSchema;
     }
 
     /**

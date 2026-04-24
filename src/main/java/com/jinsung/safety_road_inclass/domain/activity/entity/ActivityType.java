@@ -12,6 +12,7 @@ public enum ActivityType {
     QUEST_COMPLETED,       // 퀘스트 완료
     HAZARD_CYCLE_REPORTED,  // Hazard Cycle 생성/AI 분석 완료
     HAZARD_CYCLE_COMPLETED, // Hazard Cycle 조치 완료
+    HAZARD_CYCLE_ACKED,     // 동료 근로자 위험요인 확인 (산안법 제36조 근로자 참여 증빙)
     EDUCATION_COMPLETED,    // 교육 영상 시청 + 퀴즈 완료 (불합격 포함)
     EDUCATION_QUIZ_PASSED   // 교육 퀴즈 합격 (수료 인정)
 }

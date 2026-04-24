@@ -38,4 +38,34 @@ public interface HazardReportRepository extends JpaRepository<HazardReport, Long
 
     @Query("SELECT COALESCE(SUM(h.tier1PointsAwarded + h.tier2PointsAwarded), 0) FROM HazardReport h WHERE h.reporter.id = :reporterId")
     Integer sumPointsByReporterId(@Param("reporterId") Long reporterId);
+
+    /**
+     * 동일 사진 해시의 최근 분석 완료 사이클 조회 (캐시 히트 판정용).
+     * analyzedAfter 이후에 분석된 결과만 유효한 캐시로 간주한다.
+     */
+    @Query("SELECT h FROM HazardReport h " +
+            "WHERE h.photoSha256 = :sha256 " +
+            "AND h.aiAnalyzedAt IS NOT NULL " +
+            "AND h.aiAnalyzedAt >= :analyzedAfter " +
+            "ORDER BY h.aiAnalyzedAt DESC")
+    List<HazardReport> findRecentAnalyzedByHash(
+            @Param("sha256") String sha256,
+            @Param("analyzedAfter") LocalDateTime analyzedAfter);
+
+    /**
+     * 월간 위험요인 개선대장용 — 해당 월에 보고된 사이클 전체.
+     */
+    List<HazardReport> findByReportedAtBetweenOrderByReportedAtAsc(
+            LocalDateTime start,
+            LocalDateTime end);
+
+    Optional<HazardReport> findByCertNumber(String certNumber);
+
+    /**
+     * 해시체인 이전 링크용 — 가장 최근 봉인된(integrity_hash IS NOT NULL) 사이클 1건.
+     */
+    @Query("SELECT h FROM HazardReport h " +
+            "WHERE h.integrityHash IS NOT NULL " +
+            "ORDER BY h.id DESC")
+    List<HazardReport> findMostRecentSealed(org.springframework.data.domain.Pageable pageable);
 }

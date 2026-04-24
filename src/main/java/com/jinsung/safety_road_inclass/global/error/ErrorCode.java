@@ -112,6 +112,8 @@ public enum ErrorCode {
     HAZARD_CYCLE_ALREADY_COMPLETED(HttpStatus.CONFLICT, "HC002", "이미 조치 완료된 Hazard Cycle입니다."),
     HAZARD_CYCLE_FORBIDDEN(HttpStatus.FORBIDDEN, "HC003", "해당 Hazard Cycle에 접근 권한이 없습니다."),
     HAZARD_DAILY_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "HC004", "일일 Hazard Cycle 생성 한도를 초과했습니다."),
+    HAZARD_ACK_DUPLICATE(HttpStatus.CONFLICT, "HC005", "이미 이 Hazard Cycle을 확인하셨습니다."),
+    HAZARD_ACK_SELF_FORBIDDEN(HttpStatus.BAD_REQUEST, "HC006", "본인이 신고한 Hazard Cycle은 확인할 수 없습니다."),
 
     // ===== WorkStop (작업중지권 — 중대재해처벌법 증거) =====
     WORK_STOP_NOT_FOUND(HttpStatus.NOT_FOUND, "WS001", "작업중지 신고를 찾을 수 없습니다."),

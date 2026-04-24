@@ -59,6 +59,70 @@ public class HazardReport extends BaseTimeEntity {
     @Column(name = "ai_token_usage")
     private Integer aiTokenUsage;
 
+    // 확장 위험성평가 필드 (고용노동부 고시 제2023-19호)
+    @Column(name = "ai_hazard_classification", length = 50)
+    private String aiHazardClassification;
+
+    @Column(name = "ai_unsafe_condition", length = 1000)
+    private String aiUnsafeCondition;
+
+    @Column(name = "ai_unsafe_act", length = 1000)
+    private String aiUnsafeAct;
+
+    @Column(name = "ai_possible_accident", length = 100)
+    private String aiPossibleAccident;
+
+    @Column(name = "ai_severity_score")
+    private Integer aiSeverityScore;
+
+    @Column(name = "ai_severity_rationale", length = 500)
+    private String aiSeverityRationale;
+
+    @Column(name = "ai_likelihood_score")
+    private Integer aiLikelihoodScore;
+
+    @Column(name = "ai_likelihood_rationale", length = 500)
+    private String aiLikelihoodRationale;
+
+    @Column(name = "ai_risk_score")
+    private Integer aiRiskScore;
+
+    @Column(name = "ai_legal_basis_json", columnDefinition = "TEXT")
+    private String aiLegalBasisJson;
+
+    @Column(name = "ai_kosha_guide", length = 50)
+    private String aiKoshaGuide;
+
+    @Column(name = "ai_control_measures_json", columnDefinition = "TEXT")
+    private String aiControlMeasuresJson;
+
+    @Column(name = "ai_responsible_role", length = 50)
+    private String aiResponsibleRole;
+
+    @Column(name = "ai_due_days")
+    private Integer aiDueDays;
+
+    @Column(name = "ai_confidence")
+    private Double aiConfidence;
+
+    // 사진 해시(SHA-256 hex) — 동일 사진 재분석 방지용 캐시 키
+    @Column(name = "photo_sha256", length = 64)
+    private String photoSha256;
+
+    // 캐시 재사용 시 원본 사이클 ID (감사 추적용)
+    @Column(name = "ai_cache_source_id")
+    private Long aiCacheSourceId;
+
+    // 무결성 해시체인 — 생성 시 즉시 확정, 이후 수정 금지(데이터 조작 증명)
+    @Column(name = "cert_number", length = 36, unique = true)
+    private String certNumber;
+
+    @Column(name = "prev_hash", length = 64)
+    private String prevHash;
+
+    @Column(name = "integrity_hash", length = 64)
+    private String integrityHash;
+
     @Column(name = "completion_photo_path", length = 500)
     private String completionPhotoPath;
 
@@ -129,6 +193,42 @@ public class HazardReport extends BaseTimeEntity {
         this.status = CycleStatus.AI_ANALYZED;
     }
 
+    /**
+     * 확장 위험성평가 결과 적용.
+     * applyAiAnalysis()로 기본 필드 설정 후 호출한다.
+     */
+    public void applyExtendedAnalysis(String hazardClassification,
+                                      String unsafeCondition,
+                                      String unsafeAct,
+                                      String possibleAccident,
+                                      Integer severityScore,
+                                      String severityRationale,
+                                      Integer likelihoodScore,
+                                      String likelihoodRationale,
+                                      Integer riskScore,
+                                      String legalBasisJson,
+                                      String koshaGuide,
+                                      String controlMeasuresJson,
+                                      String responsibleRole,
+                                      Integer dueDays,
+                                      Double confidence) {
+        this.aiHazardClassification = hazardClassification;
+        this.aiUnsafeCondition = unsafeCondition;
+        this.aiUnsafeAct = unsafeAct;
+        this.aiPossibleAccident = possibleAccident;
+        this.aiSeverityScore = severityScore;
+        this.aiSeverityRationale = severityRationale;
+        this.aiLikelihoodScore = likelihoodScore;
+        this.aiLikelihoodRationale = likelihoodRationale;
+        this.aiRiskScore = riskScore;
+        this.aiLegalBasisJson = legalBasisJson;
+        this.aiKoshaGuide = koshaGuide;
+        this.aiControlMeasuresJson = controlMeasuresJson;
+        this.aiResponsibleRole = responsibleRole;
+        this.aiDueDays = dueDays;
+        this.aiConfidence = confidence;
+    }
+
     public void completeAction(String completionPhotoPath, String completionNote, LocalDateTime completedAt) {
         this.completionPhotoPath = completionPhotoPath;
         this.completionNote = completionNote;
@@ -153,5 +253,53 @@ public class HazardReport extends BaseTimeEntity {
     public void addPhoto(HazardReportPhoto photo) {
         this.photos.add(photo);
         photo.setHazardReport(this);
+    }
+
+    public void setPhotoSha256(String sha256) {
+        this.photoSha256 = sha256;
+    }
+
+    public void markCacheReuse(Long sourceId) {
+        this.aiCacheSourceId = sourceId;
+    }
+
+    public void sealIntegrity(String certNumber, String prevHash, String integrityHash) {
+        if (this.integrityHash != null) {
+            // 이미 확정된 해시체인은 재계산 금지
+            return;
+        }
+        this.certNumber = certNumber;
+        this.prevHash = prevHash;
+        this.integrityHash = integrityHash;
+    }
+
+    /**
+     * 다른 HazardReport의 AI 분석 결과를 이 사이클에 복사.
+     * 캐시 히트 시 호출한다.
+     */
+    public void copyAiAnalysisFrom(HazardReport source, LocalDateTime analyzedAt) {
+        this.aiRiskLevel = source.aiRiskLevel;
+        this.aiRiskFactor = source.aiRiskFactor;
+        this.aiRemediationSteps = source.aiRemediationSteps;
+        this.aiReferenceCode = source.aiReferenceCode;
+        this.aiTokenUsage = 0;
+        this.aiAnalyzedAt = analyzedAt;
+        this.aiHazardClassification = source.aiHazardClassification;
+        this.aiUnsafeCondition = source.aiUnsafeCondition;
+        this.aiUnsafeAct = source.aiUnsafeAct;
+        this.aiPossibleAccident = source.aiPossibleAccident;
+        this.aiSeverityScore = source.aiSeverityScore;
+        this.aiSeverityRationale = source.aiSeverityRationale;
+        this.aiLikelihoodScore = source.aiLikelihoodScore;
+        this.aiLikelihoodRationale = source.aiLikelihoodRationale;
+        this.aiRiskScore = source.aiRiskScore;
+        this.aiLegalBasisJson = source.aiLegalBasisJson;
+        this.aiKoshaGuide = source.aiKoshaGuide;
+        this.aiControlMeasuresJson = source.aiControlMeasuresJson;
+        this.aiResponsibleRole = source.aiResponsibleRole;
+        this.aiDueDays = source.aiDueDays;
+        this.aiConfidence = source.aiConfidence;
+        this.aiCacheSourceId = source.id;
+        this.status = CycleStatus.AI_ANALYZED;
     }
 }

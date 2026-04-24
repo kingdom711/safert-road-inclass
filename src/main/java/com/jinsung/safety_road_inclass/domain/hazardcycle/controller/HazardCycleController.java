@@ -18,10 +18,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -108,6 +113,58 @@ public class HazardCycleController {
                 photos != null ? photos : Collections.emptyList());
 
         return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "Hazard Cycle 요약 조회(공유용)",
+            description = "동료 확인(peer ack)을 위해 소유권 검증 없이 사이클 요약을 반환합니다. 인증된 사용자라면 누구나 접근 가능.")
+    @GetMapping("/{cycleId}/summary")
+    public ApiResponse<HazardCycleResponse> getCycleSummary(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal principal,
+            @PathVariable Long cycleId) {
+
+        HazardCycleResponse response = hazardCycleService.getCycleSummary(cycleId);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "동료 근로자 위험요인 확인",
+            description = "산안법 제36조 2항 근로자 참여 증빙을 위한 peer ack. 본인 사이클 ack 불가, 중복 ack 불가.")
+    @PostMapping(value = "/{cycleId}/ack", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ApiResponse<HazardAckResponse> ackCycle(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal principal,
+            @PathVariable Long cycleId,
+            @Valid @RequestBody(required = false) HazardAckRequest request) {
+
+        HazardAckResponse response = hazardCycleService.ackHazardCycle(principal.userId(), cycleId, request);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "Hazard Cycle 확인자 목록", description = "이 사이클을 확인한 동료 근로자 목록을 조회합니다.")
+    @GetMapping("/{cycleId}/acks")
+    public ApiResponse<List<HazardAckResponse>> listAcks(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal principal,
+            @PathVariable Long cycleId) {
+
+        List<HazardAckResponse> response = hazardCycleService.listAcks(cycleId);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "위험성평가표 PDF 다운로드",
+            description = "고용노동부 고시 제2023-19호 준수 양식으로 위험성평가표 PDF를 생성합니다. AI 분석이 완료된 사이클만 발급 가능합니다.")
+    @GetMapping(value = "/{cycleId}/risk-assessment.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> downloadRiskAssessmentPdf(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal principal,
+            @PathVariable Long cycleId) {
+
+        byte[] pdf = hazardCycleService.renderRiskAssessmentPdf(principal.userId(), cycleId);
+
+        String filename = "risk-assessment-" + cycleId + ".pdf";
+        String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + encoded)
+                .body(pdf);
     }
 
     @Operation(summary = "Hazard Cycle 통계", description = "내 Hazard Cycle 완료율/위험등급 분포 통계를 조회합니다.")

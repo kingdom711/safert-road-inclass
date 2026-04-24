@@ -79,15 +79,39 @@ public class BusinessPlanService {
             // 조치 기록 ID 생성
             String actionRecordId = UUID.randomUUID().toString();
 
+            // 서버측 일관성 보정: severity × likelihood = riskScore
+            Integer computedRiskScore = null;
+            if (analysisResult.getSeverity() != null && analysisResult.getSeverity().getScore() != null
+                    && analysisResult.getLikelihood() != null && analysisResult.getLikelihood().getScore() != null) {
+                computedRiskScore = analysisResult.getSeverity().getScore() * analysisResult.getLikelihood().getScore();
+            } else if (analysisResult.getRiskScore() != null) {
+                computedRiskScore = analysisResult.getRiskScore();
+            }
+
             // Response 생성
             BusinessPlanResponse response = BusinessPlanResponse.builder()
                     .riskFactor(analysisResult.getRiskFactor())
                     .remediationSteps(analysisResult.getRemediationSteps())
-                    .referenceCode(analysisResult.getReferenceCode())
+                    .referenceCode(analysisResult.getReferenceCode() != null
+                            ? analysisResult.getReferenceCode()
+                            : analysisResult.getKoshaGuide())
                     .riskLevel(analysisResult.getRiskLevel())
                     .analysisId(analysisId)
                     .actionRecordId(actionRecordId)
                     .analyzedAt(LocalDateTime.now())
+                    .hazardClassification(analysisResult.getHazardClassification())
+                    .unsafeCondition(analysisResult.getUnsafeCondition())
+                    .unsafeAct(analysisResult.getUnsafeAct())
+                    .possibleAccident(analysisResult.getPossibleAccident())
+                    .severity(mapScore(analysisResult.getSeverity()))
+                    .likelihood(mapScore(analysisResult.getLikelihood()))
+                    .riskScore(computedRiskScore)
+                    .legalBasis(mapLegalBasis(analysisResult.getLegalBasis()))
+                    .koshaGuide(analysisResult.getKoshaGuide())
+                    .controlMeasures(mapControlMeasures(analysisResult.getControlMeasures()))
+                    .responsibleRole(analysisResult.getResponsibleRole())
+                    .dueDays(analysisResult.getDueDays())
+                    .confidence(analysisResult.getConfidence())
                     .build();
             
             long duration = System.currentTimeMillis() - startTime;
@@ -110,5 +134,35 @@ public class BusinessPlanService {
     public BusinessPlanResponse generate(BusinessPlanRequest request) {
         String requestId = UUID.randomUUID().toString().substring(0, 8);
         return generate(request, requestId);
+    }
+
+    private BusinessPlanResponse.ScoreDetail mapScore(GeminiAnalysisResult.ScoreDetail s) {
+        if (s == null) return null;
+        return BusinessPlanResponse.ScoreDetail.builder()
+                .score(s.getScore())
+                .rationale(s.getRationale())
+                .build();
+    }
+
+    private java.util.List<BusinessPlanResponse.LegalReference> mapLegalBasis(
+            java.util.List<GeminiAnalysisResult.LegalReference> refs) {
+        if (refs == null || refs.isEmpty()) return null;
+        return refs.stream()
+                .map(r -> BusinessPlanResponse.LegalReference.builder()
+                        .law(r.getLaw())
+                        .article(r.getArticle())
+                        .content(r.getContent())
+                        .build())
+                .toList();
+    }
+
+    private BusinessPlanResponse.ControlMeasures mapControlMeasures(GeminiAnalysisResult.ControlMeasures cm) {
+        if (cm == null) return null;
+        return BusinessPlanResponse.ControlMeasures.builder()
+                .immediate(cm.getImmediate())
+                .engineering(cm.getEngineering())
+                .administrative(cm.getAdministrative())
+                .ppe(cm.getPpe())
+                .build();
     }
 }

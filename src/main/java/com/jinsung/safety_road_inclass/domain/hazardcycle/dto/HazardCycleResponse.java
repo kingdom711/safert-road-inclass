@@ -39,6 +39,57 @@ public class HazardCycleResponse {
         private List<String> remediationSteps;
         private String referenceCode;
         private LocalDateTime analyzedAt;
+
+        // 확장 위험성평가 필드
+        private String hazardClassification;
+        private String unsafeCondition;
+        private String unsafeAct;
+        private String possibleAccident;
+        private ScoreDetail severity;
+        private ScoreDetail likelihood;
+        private Integer riskScore;
+        private List<LegalReference> legalBasis;
+        private String koshaGuide;
+        private ControlMeasures controlMeasures;
+        private String responsibleRole;
+        private Integer dueDays;
+        private Double confidence;
+
+        // 캐시 재사용 출처 (null이면 신규 분석)
+        private Long cacheSourceId;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ScoreDetail {
+        private Integer score;
+        private String rationale;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LegalReference {
+        private String law;
+        private String article;
+        private String content;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ControlMeasures {
+        private List<String> immediate;
+        private List<String> engineering;
+        private List<String> administrative;
+        private List<String> ppe;
     }
 
     @Getter
