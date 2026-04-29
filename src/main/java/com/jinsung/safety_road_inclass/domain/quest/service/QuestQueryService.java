@@ -146,8 +146,15 @@ public class QuestQueryService {
                         .periodKey(periodKey)
                         .build());
 
+        // 멱등성 보장: 이미 보상이 지급된 경우에도 성공 응답 반환 (자동 지급 폴백)
         if (teamProgress.getRewardedAt() != null) {
-            throw new CustomException(ErrorCode.REWARD_ALREADY_CLAIMED);
+            return ClaimTeamQuestRewardResponse.builder()
+                    .questId(quest.getId())
+                    .code(quest.getCode())
+                    .periodKey(periodKey)
+                    .rewardedMembers(activeMembers.size())
+                    .reward(toReward(quest))
+                    .build();
         }
 
         teamProgress.updateCounts(completedCount, activeMembers.size());
@@ -181,7 +188,7 @@ public class QuestQueryService {
 
         boolean completed = activeMembers.size() > 0 && completedCount >= activeMembers.size();
         TeamQuestProgress storedProgress = syncCompletion
-                ? syncTeamProgress(team, activeMembers, quest, periodKey, completedCount, completed, canRewardOnQuery(quest))
+                ? syncTeamProgress(team, activeMembers, quest, periodKey, completedCount, completed)
                 : teamQuestProgressRepository.findByTeamAndQuestAndPeriodKey(team, quest, periodKey).orElse(null);
         boolean rewardClaimed = storedProgress != null && storedProgress.getRewardedAt() != null;
 
@@ -223,13 +230,22 @@ public class QuestQueryService {
             }
             boolean completed = isZeroWorkStopCompleted(team, now);
             int completedCount = completed ? activeMembers.size() : 0;
-            syncTeamProgress(team, activeMembers, quest, periodKey, completedCount, completed, true);
+            TeamQuestProgress teamProgress = syncTeamProgress(team, activeMembers, quest, periodKey, completedCount, completed);
+            // 스케줄러 전용 보상 경로: zero_work_stop은 이벤트가 아닌 주간 마감 시 평가
+            if (completed && teamProgress.getRewardedAt() == null) {
+                activeMembers.forEach(member -> grantReward(member.getUser(), quest));
+                teamProgress.markRewarded();
+                teamQuestProgressRepository.save(teamProgress);
+            }
         }
     }
 
+    /**
+     * 팀 퀘스트 진행도 동기화 (카운트만 갱신, 보상 지급 없음).
+     * 보상은 QuestProgressListener(이벤트) 또는 closeWeeklyZeroWorkStopQuest(스케줄러)에서 처리.
+     */
     private TeamQuestProgress syncTeamProgress(Team team, List<TeamMember> activeMembers, QuestDefinition quest,
-                                               String periodKey, int completedCount, boolean completed,
-                                               boolean allowReward) {
+                                               String periodKey, int completedCount, boolean completed) {
         TeamQuestProgress teamProgress = teamQuestProgressRepository.findByTeamAndQuestAndPeriodKey(team, quest, periodKey)
                 .orElseGet(() -> TeamQuestProgress.builder()
                         .team(team)
@@ -238,15 +254,7 @@ public class QuestQueryService {
                         .build());
 
         teamProgress.updateCounts(completedCount, activeMembers.size());
-        if (completed && teamProgress.getRewardedAt() == null && allowReward) {
-            activeMembers.forEach(member -> grantReward(member.getUser(), quest));
-            teamProgress.markRewarded();
-        }
         return teamQuestProgressRepository.save(teamProgress);
-    }
-
-    private boolean canRewardOnQuery(QuestDefinition quest) {
-        return quest.getConditionType() != QuestConditionType.ZERO_WORK_STOP;
     }
 
     private void grantReward(User user, QuestDefinition quest) {
