@@ -57,7 +57,13 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 // Public endpoints (인증 불필요)
                                                 .requestMatchers("/").permitAll() // CloudType 헬스체크용 루트 경로
-                                                .requestMatchers("/api/v1/auth/**").permitAll()
+                                                .requestMatchers(
+                                                                "/api/v1/auth/signup",
+                                                                "/api/v1/auth/login",
+                                                                "/api/v1/auth/refresh",
+                                                                "/api/v1/auth/password-reset/**")
+                                                .permitAll()
+                                                .requestMatchers("/api/v1/auth/me").authenticated()
                                                 .requestMatchers("/api/v1/health/**").permitAll() // health와 health/ping
                                                                                                   // 모두 허용
                                                 .requestMatchers("/api/v1/ai/**").permitAll() // AI 분석 API (레거시)

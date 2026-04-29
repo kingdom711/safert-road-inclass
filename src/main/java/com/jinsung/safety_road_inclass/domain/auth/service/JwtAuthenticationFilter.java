@@ -101,11 +101,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         
         // 인증이 필요없는 경로
-        return path.startsWith("/api/v1/auth/") ||
+        return isPublicAuthPath(path) ||
                path.startsWith("/h2-console") ||
                path.startsWith("/swagger-ui") ||
                path.startsWith("/api-docs") ||
                path.equals("/api/v1/health");
     }
-}
 
+    private boolean isPublicAuthPath(String path) {
+        return path.equals("/api/v1/auth/signup") ||
+               path.equals("/api/v1/auth/login") ||
+               path.equals("/api/v1/auth/refresh") ||
+               path.startsWith("/api/v1/auth/password-reset/");
+    }
+}
