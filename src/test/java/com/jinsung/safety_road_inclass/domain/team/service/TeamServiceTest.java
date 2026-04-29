@@ -69,6 +69,7 @@ class TeamServiceTest {
         when(teamMemberRepository.existsByUserAndStatus(creator, MembershipStatus.ACTIVE)).thenReturn(false);
         when(teamRepository.saveAndFlush(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
         when(teamMemberRepository.saveAndFlush(any(TeamMember.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TeamCreateRequest req = new TeamCreateRequest("  철근팀  A조  ", "판교현장");
         TeamSummaryResponse res = teamService.create(10L, req);
@@ -89,6 +90,7 @@ class TeamServiceTest {
 
         assertThat(creator.getTeam()).isEqualTo(saved);
         assertThat(res.getActiveMemberCount()).isEqualTo(1L);
+        verify(userRepository).saveAndFlush(creator);
     }
 
     @Test

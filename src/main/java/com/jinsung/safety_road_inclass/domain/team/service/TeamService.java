@@ -14,6 +14,7 @@ import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -101,6 +102,7 @@ public class TeamService {
             teamMemberRepository.saveAndFlush(leaderMembership);
 
             creator.assignTeam(team);
+            userRepository.saveAndFlush(creator);
 
             log.info("Team created: id={}, name={}, site={}, leader={}",
                     team.getId(), team.getName(), team.getSiteName(), creator.getId());
@@ -109,6 +111,10 @@ public class TeamService {
         } catch (DataIntegrityViolationException e) {
             log.warn("Team create conflict: site={}, name={}, creator={}", normalizedSite, normalizedName, creatorUserId, e);
             throw new CustomException(ErrorCode.TEAM_NAME_DUPLICATED);
+        } catch (DataAccessException e) {
+            log.error("Team create failed by database access: site={}, name={}, creator={}",
+                    normalizedSite, normalizedName, creatorUserId, e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 }

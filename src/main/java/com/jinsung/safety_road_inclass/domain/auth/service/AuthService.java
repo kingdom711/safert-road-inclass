@@ -122,5 +122,14 @@ public class AuthService {
         return userRepository.findById(userId)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
+
+    /**
+     * 현재 사용자 응답 DTO 조회
+     */
+    public LoginResponse.UserInfo getUserInfoById(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        return LoginResponse.UserInfo.from(user);
+    }
 }
 

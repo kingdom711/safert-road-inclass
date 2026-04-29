@@ -46,6 +46,12 @@ public class TeamSchemaInitializer implements ApplicationRunner {
                     CONSTRAINT uk_teams_site_normalized_name UNIQUE (site_name, normalized_name)
                 )
                 """);
+        addColumnIfMissing(connection, "teams", "created_at", "ALTER TABLE teams ADD COLUMN created_at DATETIME");
+        addColumnIfMissing(connection, "teams", "updated_at", "ALTER TABLE teams ADD COLUMN updated_at DATETIME");
+        addColumnIfMissing(connection, "teams", "name", "ALTER TABLE teams ADD COLUMN name VARCHAR(100) NOT NULL DEFAULT ''");
+        addColumnIfMissing(connection, "teams", "normalized_name", "ALTER TABLE teams ADD COLUMN normalized_name VARCHAR(100) NOT NULL DEFAULT ''");
+        addColumnIfMissing(connection, "teams", "site_name", "ALTER TABLE teams ADD COLUMN site_name VARCHAR(100) NOT NULL DEFAULT ''");
+        addColumnIfMissing(connection, "teams", "leader_user_id", "ALTER TABLE teams ADD COLUMN leader_user_id INTEGER");
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS team_members (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,6 +67,15 @@ public class TeamSchemaInitializer implements ApplicationRunner {
                     CONSTRAINT uk_team_members_team_user UNIQUE (team_id, user_id)
                 )
                 """);
+        addColumnIfMissing(connection, "team_members", "created_at", "ALTER TABLE team_members ADD COLUMN created_at DATETIME");
+        addColumnIfMissing(connection, "team_members", "updated_at", "ALTER TABLE team_members ADD COLUMN updated_at DATETIME");
+        addColumnIfMissing(connection, "team_members", "approved_at", "ALTER TABLE team_members ADD COLUMN approved_at DATETIME");
+        addColumnIfMissing(connection, "team_members", "joined_at", "ALTER TABLE team_members ADD COLUMN joined_at DATETIME");
+        addColumnIfMissing(connection, "team_members", "left_at", "ALTER TABLE team_members ADD COLUMN left_at DATETIME");
+        addColumnIfMissing(connection, "team_members", "status", "ALTER TABLE team_members ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'PENDING'");
+        addColumnIfMissing(connection, "team_members", "approved_by", "ALTER TABLE team_members ADD COLUMN approved_by INTEGER");
+        addColumnIfMissing(connection, "team_members", "team_id", "ALTER TABLE team_members ADD COLUMN team_id INTEGER");
+        addColumnIfMissing(connection, "team_members", "user_id", "ALTER TABLE team_members ADD COLUMN user_id INTEGER");
         addColumnIfMissing(connection, "users", "team_id", "ALTER TABLE users ADD COLUMN team_id INTEGER");
         createCommonIndexes();
     }
@@ -78,6 +93,12 @@ public class TeamSchemaInitializer implements ApplicationRunner {
                     CONSTRAINT uk_teams_site_normalized_name UNIQUE (site_name, normalized_name)
                 )
                 """);
+        addColumnIfMissing(connection, "teams", "created_at", "ALTER TABLE teams ADD COLUMN created_at TIMESTAMP");
+        addColumnIfMissing(connection, "teams", "updated_at", "ALTER TABLE teams ADD COLUMN updated_at TIMESTAMP");
+        addColumnIfMissing(connection, "teams", "name", "ALTER TABLE teams ADD COLUMN name VARCHAR(100) NOT NULL DEFAULT ''");
+        addColumnIfMissing(connection, "teams", "normalized_name", "ALTER TABLE teams ADD COLUMN normalized_name VARCHAR(100) NOT NULL DEFAULT ''");
+        addColumnIfMissing(connection, "teams", "site_name", "ALTER TABLE teams ADD COLUMN site_name VARCHAR(100) NOT NULL DEFAULT ''");
+        addColumnIfMissing(connection, "teams", "leader_user_id", "ALTER TABLE teams ADD COLUMN leader_user_id BIGINT");
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS team_members (
                     id BIGSERIAL PRIMARY KEY,
@@ -93,6 +114,15 @@ public class TeamSchemaInitializer implements ApplicationRunner {
                     CONSTRAINT uk_team_members_team_user UNIQUE (team_id, user_id)
                 )
                 """);
+        addColumnIfMissing(connection, "team_members", "created_at", "ALTER TABLE team_members ADD COLUMN created_at TIMESTAMP");
+        addColumnIfMissing(connection, "team_members", "updated_at", "ALTER TABLE team_members ADD COLUMN updated_at TIMESTAMP");
+        addColumnIfMissing(connection, "team_members", "approved_at", "ALTER TABLE team_members ADD COLUMN approved_at TIMESTAMP");
+        addColumnIfMissing(connection, "team_members", "joined_at", "ALTER TABLE team_members ADD COLUMN joined_at TIMESTAMP");
+        addColumnIfMissing(connection, "team_members", "left_at", "ALTER TABLE team_members ADD COLUMN left_at TIMESTAMP");
+        addColumnIfMissing(connection, "team_members", "status", "ALTER TABLE team_members ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'PENDING'");
+        addColumnIfMissing(connection, "team_members", "approved_by", "ALTER TABLE team_members ADD COLUMN approved_by BIGINT");
+        addColumnIfMissing(connection, "team_members", "team_id", "ALTER TABLE team_members ADD COLUMN team_id BIGINT");
+        addColumnIfMissing(connection, "team_members", "user_id", "ALTER TABLE team_members ADD COLUMN user_id BIGINT");
         addColumnIfMissing(connection, "users", "team_id", "ALTER TABLE users ADD COLUMN team_id BIGINT");
         createCommonIndexes();
     }

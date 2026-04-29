@@ -111,9 +111,7 @@ public class AuthController {
         JwtTokenProvider.CustomUserPrincipal principal = 
             (JwtTokenProvider.CustomUserPrincipal) authentication.getPrincipal();
         
-        var user = authService.getUserById(principal.userId());
-        
-        return ResponseEntity.ok(ApiResponse.success(LoginResponse.UserInfo.from(user)));
+        return ResponseEntity.ok(ApiResponse.success(authService.getUserInfoById(principal.userId())));
     }
 }
 
