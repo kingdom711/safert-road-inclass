@@ -14,6 +14,7 @@ import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,28 +82,33 @@ public class TeamService {
             throw new CustomException(ErrorCode.TEAM_ALREADY_JOINED);
         }
 
-        Team team = Team.builder()
-                .name(request.getName().trim())
-                .normalizedName(normalizedName)
-                .siteName(normalizedSite)
-                .leader(creator)
-                .build();
-        teamRepository.save(team);
+        try {
+            Team team = Team.builder()
+                    .name(request.getName().trim())
+                    .normalizedName(normalizedName)
+                    .siteName(normalizedSite)
+                    .leader(creator)
+                    .build();
+            teamRepository.saveAndFlush(team);
 
-        TeamMember leaderMembership = TeamMember.builder()
-                .team(team)
-                .user(creator)
-                .status(MembershipStatus.PENDING)
-                .joinedAt(LocalDateTime.now())
-                .build();
-        leaderMembership.approve(creator);
-        teamMemberRepository.save(leaderMembership);
+            TeamMember leaderMembership = TeamMember.builder()
+                    .team(team)
+                    .user(creator)
+                    .status(MembershipStatus.PENDING)
+                    .joinedAt(LocalDateTime.now())
+                    .build();
+            leaderMembership.approve(creator);
+            teamMemberRepository.saveAndFlush(leaderMembership);
 
-        creator.assignTeam(team);
+            creator.assignTeam(team);
 
-        log.info("Team created: id={}, name={}, site={}, leader={}",
-                team.getId(), team.getName(), team.getSiteName(), creator.getId());
+            log.info("Team created: id={}, name={}, site={}, leader={}",
+                    team.getId(), team.getName(), team.getSiteName(), creator.getId());
 
-        return TeamSummaryResponse.of(team, 1L);
+            return TeamSummaryResponse.of(team, 1L);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Team create conflict: site={}, name={}, creator={}", normalizedSite, normalizedName, creatorUserId, e);
+            throw new CustomException(ErrorCode.TEAM_NAME_DUPLICATED);
+        }
     }
 }

@@ -67,14 +67,14 @@ class TeamServiceTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(creator));
         when(teamRepository.existsBySiteNameAndNormalizedName("판교현장", "철근팀 a조")).thenReturn(false);
         when(teamMemberRepository.existsByUserAndStatus(creator, MembershipStatus.ACTIVE)).thenReturn(false);
-        when(teamRepository.save(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(teamRepository.saveAndFlush(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(teamMemberRepository.saveAndFlush(any(TeamMember.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TeamCreateRequest req = new TeamCreateRequest("  철근팀  A조  ", "판교현장");
         TeamSummaryResponse res = teamService.create(10L, req);
 
         ArgumentCaptor<Team> teamCaptor = ArgumentCaptor.forClass(Team.class);
-        verify(teamRepository).save(teamCaptor.capture());
+        verify(teamRepository).saveAndFlush(teamCaptor.capture());
         Team saved = teamCaptor.getValue();
         assertThat(saved.getName()).isEqualTo("철근팀  A조".trim());
         assertThat(saved.getNormalizedName()).isEqualTo("철근팀 a조");
@@ -82,7 +82,7 @@ class TeamServiceTest {
         assertThat(saved.getLeader()).isEqualTo(creator);
 
         ArgumentCaptor<TeamMember> memberCaptor = ArgumentCaptor.forClass(TeamMember.class);
-        verify(teamMemberRepository).save(memberCaptor.capture());
+        verify(teamMemberRepository).saveAndFlush(memberCaptor.capture());
         TeamMember leaderMembership = memberCaptor.getValue();
         assertThat(leaderMembership.getStatus()).isEqualTo(MembershipStatus.ACTIVE);
         assertThat(leaderMembership.getApprovedBy()).isEqualTo(creator);
