@@ -52,7 +52,7 @@ class GeminiServiceTest {
         GeminiResponse response = new GeminiResponse();
 
         GeminiResponse.Part part = new GeminiResponse.Part();
-        part.setText("{\"riskFactor\":\"감전 위험\",\"riskLevel\":\"HIGH\",\"remediationSteps\":[\"전원 차단\"],\"referenceCode\":\"KOSHA-E-2023-07\"}");
+        part.setText("{\"riskFactor\":\"감전 위험\",\"riskLevel\":\"HIGH\",\"remediationSteps\":[\"전원 차단\"],\"referenceCode\":\"KOSHA-E-7-2023\"}");
 
         GeminiResponse.Content content = new GeminiResponse.Content();
         content.setParts(java.util.List.of(part));
@@ -74,7 +74,7 @@ class GeminiServiceTest {
 
         assertThat(result.getRiskLevel()).isEqualTo("HIGH");
         assertThat(result.getRiskFactor()).contains("감전");
-        assertThat(result.getReferenceCode()).isEqualTo("KOSHA-E-2023-07");
+        assertThat(result.getReferenceCode()).isEqualTo("E-7-2023");
         assertThat(result.getUsageMetadata()).isNotNull();
         assertThat(result.getUsageMetadata().getTotalTokenCount()).isEqualTo(30);
     }
@@ -125,7 +125,7 @@ class GeminiServiceTest {
         GeminiRequest request = (GeminiRequest) captured.getBody();
         String prompt = request.getContents().get(0).getParts().get(0).getText();
 
-        assertThat(prompt).contains("배관 구경에 따른 질식 위험 및 훅업(Hook-up) 작업 관련 요소는 분석 대상에서 제외합니다.");
+        assertThat(prompt).contains("배관 구경에 따른 질식 위험, 훅업(Hook-up) 작업 관련 요소는 분석 대상에서 제외합니다.");
         assertThat(result.getRiskFactor()).doesNotContain("훅업");
     }
 }

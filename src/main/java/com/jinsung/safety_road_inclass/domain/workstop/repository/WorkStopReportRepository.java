@@ -1,6 +1,7 @@
 package com.jinsung.safety_road_inclass.domain.workstop.repository;
 
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.team.entity.Team;
 import com.jinsung.safety_road_inclass.domain.workstop.entity.ReportStatus;
 import com.jinsung.safety_road_inclass.domain.workstop.entity.WorkStopReport;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,6 +33,8 @@ public interface WorkStopReportRepository extends JpaRepository<WorkStopReport, 
 
     /** 기간별 총 건수 */
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByReporterTeamAndCreatedAtBetween(Team team, LocalDateTime start, LocalDateTime end);
 
     /** 기간별 해결 건수 */
     long countByCreatedAtBetweenAndStatusIn(LocalDateTime start, LocalDateTime end, List<ReportStatus> statuses);

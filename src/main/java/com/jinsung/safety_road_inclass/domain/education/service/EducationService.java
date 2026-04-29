@@ -11,10 +11,12 @@ import com.jinsung.safety_road_inclass.domain.education.entity.QuizAttemptLog;
 import com.jinsung.safety_road_inclass.domain.education.repository.EducationCompletionRepository;
 import com.jinsung.safety_road_inclass.domain.education.repository.EducationWatchLogRepository;
 import com.jinsung.safety_road_inclass.domain.education.repository.QuizAttemptLogRepository;
+import com.jinsung.safety_road_inclass.domain.quest.event.EducationCompletedEvent;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,7 @@ public class EducationService {
     private final QuizAttemptLogRepository      quizAttemptLogRepository;
     private final HashChainService              hashChainService;
     private final ActivityLogService            activityLogService;
+    private final ApplicationEventPublisher     eventPublisher;
 
     // ─── 1. 영상 시청 체크포인트 ─────────────────────────────────────
 
@@ -180,6 +183,12 @@ public class EducationService {
         log.info("[Education] Complete: userId={}, educationId={}, cert={}, score={}, hash={}",
                 userId, req.getEducationId(), certNumber, req.getQuizScore(),
                 integrityHash.substring(0, 8) + "...");
+
+        eventPublisher.publishEvent(new EducationCompletedEvent(
+                userId,
+                req.getEducationId(),
+                completion.getCompletedAt()
+        ));
 
         return EducationCompleteResponse.from(completion);
     }

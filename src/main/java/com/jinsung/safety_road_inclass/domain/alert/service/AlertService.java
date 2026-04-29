@@ -3,6 +3,7 @@ package com.jinsung.safety_road_inclass.domain.alert.service;
 import com.jinsung.safety_road_inclass.domain.alert.dto.AlertRequest;
 import com.jinsung.safety_road_inclass.domain.alert.dto.AlertResponse;
 import com.jinsung.safety_road_inclass.domain.alert.entity.Alert;
+import com.jinsung.safety_road_inclass.domain.alert.entity.AlertType;
 import com.jinsung.safety_road_inclass.domain.alert.repository.AlertRepository;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
@@ -46,6 +47,15 @@ public class AlertService {
                 .toList();
     }
 
+    public List<AlertResponse> getActiveAlerts(Long userId) {
+        if (userId == null) {
+            return getActiveAlerts();
+        }
+        return alertRepository.findActiveAlertsForUser(LocalDateTime.now(), userId).stream()
+                .map(AlertResponse::from)
+                .toList();
+    }
+
     /**
      * 알림 상세 조회
      */
@@ -82,6 +92,27 @@ public class AlertService {
                  createdBy != null ? createdBy.getUsername() : "시스템");
 
         return AlertResponse.from(saved);
+    }
+
+    @Transactional
+    public void createTeamNotification(User recipient, User actor, AlertType type, String title, String message) {
+        if (recipient == null) {
+            return;
+        }
+
+        Alert alert = Alert.builder()
+                .title(title)
+                .message(message)
+                .type(type)
+                .priority(50)
+                .active(true)
+                .startDate(LocalDateTime.now())
+                .createdBy(actor)
+                .recipient(recipient)
+                .build();
+        alertRepository.save(alert);
+        log.info("Team notification created: type={}, recipient={}, actor={}",
+                type, recipient.getId(), actor != null ? actor.getId() : null);
     }
 
     /**

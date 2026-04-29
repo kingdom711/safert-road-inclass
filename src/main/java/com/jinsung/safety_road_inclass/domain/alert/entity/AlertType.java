@@ -1,11 +1,13 @@
 package com.jinsung.safety_road_inclass.domain.alert.entity;
 
-/**
- * AlertType - 알림 유형 Enum
- */
 public enum AlertType {
-    INFO,       // 일반 정보
-    WARNING,    // 경고
-    DANGER,     // 위험/긴급
-    SUCCESS     // 성공/완료
+    INFO,
+    WARNING,
+    DANGER,
+    SUCCESS,
+    TEAM_JOIN_REQUESTED,
+    TEAM_JOIN_APPROVED,
+    TEAM_JOIN_REJECTED,
+    TEAM_MEMBER_KICKED,
+    TEAM_QUEST_REWARDED
 }

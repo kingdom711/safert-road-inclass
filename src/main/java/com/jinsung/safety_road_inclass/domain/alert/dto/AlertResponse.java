@@ -45,6 +45,9 @@ public class AlertResponse {
     @Schema(description = "작성자 이름", example = "관리자")
     private String createdByName;
 
+    private Long recipientUserId;
+    private String recipientName;
+
     @Schema(description = "생성일", example = "2026-01-14T10:00:00")
     private LocalDateTime createdAt;
 
@@ -65,6 +68,8 @@ public class AlertResponse {
                 .startDate(alert.getStartDate())
                 .endDate(alert.getEndDate())
                 .createdByName(alert.getCreatedBy() != null ? alert.getCreatedBy().getName() : null)
+                .recipientUserId(alert.getRecipient() != null ? alert.getRecipient().getId() : null)
+                .recipientName(alert.getRecipient() != null ? alert.getRecipient().getName() : null)
                 .createdAt(alert.getCreatedAt())
                 .updatedAt(alert.getUpdatedAt())
                 .build();

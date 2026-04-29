@@ -37,8 +37,10 @@ public class AlertController {
 
     @Operation(summary = "활성 알림 조회", description = "현재 시간 기준 활성화된 알림만 조회합니다.")
     @GetMapping("/active")
-    public ApiResponse<List<AlertResponse>> getActiveAlerts() {
-        List<AlertResponse> alerts = alertService.getActiveAlerts();
+    public ApiResponse<List<AlertResponse>> getActiveAlerts(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal principal) {
+        Long userId = principal != null ? principal.userId() : null;
+        List<AlertResponse> alerts = alertService.getActiveAlerts(userId);
         return ApiResponse.success(alerts);
     }
 

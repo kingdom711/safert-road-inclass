@@ -14,6 +14,7 @@ import lombok.Getter;
 public class TeamRankingResponse {
 
     private int rank;
+    private Long teamId;
     private String teamName;
     private int memberCount;
     private long totalPoints;
@@ -22,8 +23,14 @@ public class TeamRankingResponse {
 
     public static TeamRankingResponse of(int rank, String teamName, int memberCount,
                                           long totalPoints, int avgPoints, String topMember) {
+        return of(rank, null, teamName, memberCount, totalPoints, avgPoints, topMember);
+    }
+
+    public static TeamRankingResponse of(int rank, Long teamId, String teamName, int memberCount,
+                                          long totalPoints, int avgPoints, String topMember) {
         return TeamRankingResponse.builder()
                 .rank(rank)
+                .teamId(teamId)
                 .teamName(teamName)
                 .memberCount(memberCount)
                 .totalPoints(totalPoints)

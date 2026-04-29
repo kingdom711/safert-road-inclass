@@ -82,6 +82,9 @@ public class SecurityConfig {
                                                 // 작업중지권 - 모든 인증된 사용자 (산업안전보건법 제52조)
                                                 .requestMatchers("/api/v1/work-stop-reports/**").authenticated()
 
+                                                // 팀 도메인 - 모든 인증된 사용자
+                                                .requestMatchers("/api/v1/teams/**").authenticated()
+
                                                 // 컴플라이언스 리포트 - 관리자급만 접근
                                                 .requestMatchers("/api/v1/compliance-reports/**")
                                                 .hasAnyRole("SUPERVISOR", "SAFETY_MANAGER", "ADMIN")

@@ -49,9 +49,13 @@ public class Alert extends BaseTimeEntity {
     @JoinColumn(name = "created_by_id")
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_id")
+    private User recipient;
+
     @Builder
     public Alert(String title, String message, AlertType type, Integer priority,
-                 Boolean active, LocalDateTime startDate, LocalDateTime endDate, User createdBy) {
+                 Boolean active, LocalDateTime startDate, LocalDateTime endDate, User createdBy, User recipient) {
         this.title = title;
         this.message = message;
         this.type = type != null ? type : AlertType.INFO;
@@ -60,6 +64,7 @@ public class Alert extends BaseTimeEntity {
         this.startDate = startDate;
         this.endDate = endDate;
         this.createdBy = createdBy;
+        this.recipient = recipient;
     }
 
     /**

@@ -57,6 +57,9 @@ public class LoginResponse {
         @Schema(description = "이메일", example = "worker1@example.com")
         private String email;
 
+        @Schema(description = "소속 팀 정보")
+        private TeamInfo team;
+
         public static UserInfo from(User user) {
             return UserInfo.builder()
                 .id(user.getId())
@@ -64,6 +67,28 @@ public class LoginResponse {
                 .name(user.getName())
                 .role(user.getRole().name())
                 .email(user.getEmail())
+                .team(user.getTeam() == null ? null : TeamInfo.from(user))
+                .build();
+        }
+    }
+
+    @Schema(description = "팀 요약 정보")
+    @Getter
+    @Builder
+    public static class TeamInfo {
+
+        private Long id;
+        private String name;
+        private String siteName;
+        private boolean leader;
+
+        public static TeamInfo from(User user) {
+            var team = user.getTeam();
+            return TeamInfo.builder()
+                .id(team.getId())
+                .name(team.getName())
+                .siteName(team.getSiteName())
+                .leader(team.getLeader() != null && team.getLeader().getId().equals(user.getId()))
                 .build();
         }
     }

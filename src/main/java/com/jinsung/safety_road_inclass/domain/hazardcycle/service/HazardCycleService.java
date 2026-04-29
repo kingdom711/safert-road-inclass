@@ -14,11 +14,13 @@ import com.jinsung.safety_road_inclass.domain.hazardcycle.entity.*;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportAckRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportPhotoRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportRepository;
+import com.jinsung.safety_road_inclass.domain.quest.event.HazardReportedEvent;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import com.jinsung.safety_road_inclass.global.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -56,6 +58,7 @@ public class HazardCycleService {
     private final RiskAssessmentPdfService riskAssessmentPdfService;
     private final HazardLogExcelService hazardLogExcelService;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Step 1+2: 위험 사진 업로드 + AI 분석 + 1단계 보상
@@ -461,6 +464,12 @@ public class HazardCycleService {
             log.info("Hazard Cycle 캐시 히트: cycleId={}, sourceId={}, sha256={}",
                     report.getId(), source.getId(), photoHash.substring(0, 12));
 
+            eventPublisher.publishEvent(new HazardReportedEvent(
+                    reporter.getId(),
+                    report.getId(),
+                    report.getReportedAt()
+            ));
+
             return toResponse(report, tier1Reward, null);
         }
 
@@ -521,6 +530,12 @@ public class HazardCycleService {
 
         log.info("Hazard Cycle 생성 완료: cycleId={}, reporterId={}, offline={}",
                 report.getId(), reporter.getId(), syncedFromOffline);
+
+        eventPublisher.publishEvent(new HazardReportedEvent(
+                reporter.getId(),
+                report.getId(),
+                report.getReportedAt()
+        ));
 
         return toResponse(report, tier1Reward, null);
     }

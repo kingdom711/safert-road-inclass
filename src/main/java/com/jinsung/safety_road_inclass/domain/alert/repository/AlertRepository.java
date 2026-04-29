@@ -32,6 +32,14 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
            "ORDER BY a.priority DESC, a.createdAt DESC")
     List<Alert> findActiveAlerts(@Param("now") LocalDateTime now);
 
+    @Query("SELECT a FROM Alert a " +
+           "WHERE a.active = true " +
+           "AND (a.recipient IS NULL OR a.recipient.id = :userId) " +
+           "AND (a.startDate IS NULL OR a.startDate <= :now) " +
+           "AND (a.endDate IS NULL OR a.endDate >= :now) " +
+           "ORDER BY a.priority DESC, a.createdAt DESC")
+    List<Alert> findActiveAlertsForUser(@Param("now") LocalDateTime now, @Param("userId") Long userId);
+
     /**
      * 알림 유형별 조회
      */

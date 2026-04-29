@@ -122,7 +122,16 @@ public enum ErrorCode {
 
     // ===== Compliance (컴플라이언스 리포트 — 중대재해처벌법 증거) =====
     COMPLIANCE_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "CP001", "컴플라이언스 리포트를 찾을 수 없습니다."),
-    COMPLIANCE_REPORT_ALREADY_EXISTS(HttpStatus.CONFLICT, "CP002", "해당 연월의 리포트가 이미 존재합니다.");
+    COMPLIANCE_REPORT_ALREADY_EXISTS(HttpStatus.CONFLICT, "CP002", "해당 연월의 리포트가 이미 존재합니다."),
+
+    // ===== Team (팀) =====
+    TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, "TM001", "팀을 찾을 수 없습니다."),
+    TEAM_NAME_DUPLICATED(HttpStatus.CONFLICT, "TM002", "동일 현장에 같은 이름의 팀이 이미 존재합니다."),
+    TEAM_INVALID_NAME(HttpStatus.BAD_REQUEST, "TM003", "팀 이름이 유효하지 않습니다."),
+    TEAM_ALREADY_JOINED(HttpStatus.CONFLICT, "TM004", "이미 팀에 소속되어 있습니다."),
+    TEAM_MEMBERSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TM005", "팀 멤버십을 찾을 수 없습니다."),
+    TEAM_MEMBERSHIP_INVALID_STATUS(HttpStatus.BAD_REQUEST, "TM006", "유효하지 않은 멤버십 상태 전이입니다."),
+    TEAM_LEADER_FORBIDDEN(HttpStatus.FORBIDDEN, "TM007", "팀 리더만 수행할 수 있는 작업입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

@@ -1,5 +1,6 @@
 package com.jinsung.safety_road_inclass.domain.auth.entity;
 
+import com.jinsung.safety_road_inclass.domain.team.entity.Team;
 import com.jinsung.safety_road_inclass.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -43,6 +44,10 @@ public class User extends BaseTimeEntity {
     @Column(unique = true, length = 20)
     private String phoneNumber;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
+
     @Builder
     public User(String username, String password, Role role, String name, String email, boolean isVerified,
             String phoneNumber) {
@@ -72,5 +77,13 @@ public class User extends BaseTimeEntity {
     public void verify(String phoneNumber) {
         this.isVerified = true;
         this.phoneNumber = phoneNumber;
+    }
+
+    public void assignTeam(Team team) {
+        this.team = team;
+    }
+
+    public void clearTeam() {
+        this.team = null;
     }
 }

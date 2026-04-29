@@ -10,6 +10,7 @@ import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.dto.*;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.entity.CycleStatus;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.entity.HazardReport;
+import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportAckRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportPhotoRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportRepository;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -59,6 +61,18 @@ class HazardCycleServiceTest {
     @Mock
     private CycleRewardService cycleRewardService;
 
+    @Mock
+    private HazardReportAckRepository hazardReportAckRepository;
+
+    @Mock
+    private RiskAssessmentPdfService riskAssessmentPdfService;
+
+    @Mock
+    private HazardLogExcelService hazardLogExcelService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private HazardCycleService hazardCycleService;
 
     @BeforeEach
@@ -66,12 +80,16 @@ class HazardCycleServiceTest {
         hazardCycleService = new HazardCycleService(
                 hazardReportRepository,
                 hazardReportPhotoRepository,
+                hazardReportAckRepository,
                 userRepository,
                 geminiService,
                 storageService,
                 activityLogService,
                 cycleRewardService,
-                new ObjectMapper()
+                riskAssessmentPdfService,
+                hazardLogExcelService,
+                new ObjectMapper(),
+                eventPublisher
         );
     }
 

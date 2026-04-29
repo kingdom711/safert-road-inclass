@@ -12,17 +12,23 @@ import com.jinsung.safety_road_inclass.domain.point.repository.UserPointsReposit
 import com.jinsung.safety_road_inclass.domain.ranking.dto.MyRankResponse;
 import com.jinsung.safety_road_inclass.domain.ranking.dto.RankingEntryResponse;
 import com.jinsung.safety_road_inclass.domain.ranking.dto.TeamRankingResponse;
+import com.jinsung.safety_road_inclass.domain.team.entity.MembershipStatus;
+import com.jinsung.safety_road_inclass.domain.team.entity.Team;
+import com.jinsung.safety_road_inclass.domain.team.entity.TeamMember;
+import com.jinsung.safety_road_inclass.domain.team.repository.TeamMemberRepository;
+import com.jinsung.safety_road_inclass.domain.team.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
-/**
- * RankingService - 랭킹 조회 서비스
- */
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -33,21 +39,9 @@ public class RankingService {
     private final UserStreakRepository userStreakRepository;
     private final GameProfileRepository gameProfileRepository;
     private final UserRepository userRepository;
+    private final TeamRepository teamRepository;
+    private final TeamMemberRepository teamMemberRepository;
 
-    private static final Map<String, String> ROLE_TEAM_NAMES = Map.of(
-            "ROLE_WORKER", "기술자팀",
-            "ROLE_SUPERVISOR", "관리감독자팀",
-            "ROLE_SAFETY_MANAGER", "안전관리자팀",
-            "ROLE_ADMIN", "관리자팀"
-    );
-
-    /**
-     * 개인 랭킹 조회
-     *
-     * @param type   points | level | streak
-     * @param limit  조회 수
-     * @param role   역할 필터 (optional, e.g. "WORKER")
-     */
     public List<RankingEntryResponse> getRankings(String type, int limit, String role) {
         Role roleFilter = parseRole(role);
 
@@ -58,9 +52,6 @@ public class RankingService {
         };
     }
 
-    /**
-     * 현재 사용자 랭킹 조회
-     */
     public MyRankResponse getMyRank(Long userId, String type) {
         List<RankingEntryResponse> allRankings = getRankings(type, Integer.MAX_VALUE, null);
         int totalUsers = allRankings.size();
@@ -75,7 +66,6 @@ public class RankingService {
             }
         }
 
-        // 랭킹에 없는 경우 (데이터가 아직 없는 신규 유저)
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             return MyRankResponse.of(0, totalUsers, userId, "", "", 0, 1, 0);
@@ -88,76 +78,78 @@ public class RankingService {
         );
     }
 
-    /**
-     * 팀(역할 그룹) 랭킹 조회
-     */
     public List<TeamRankingResponse> getTeamRankings(String type, int limit) {
-        List<UserPoints> allPoints = userPointsRepository.findAllOrderByBalanceDesc();
-
-        // Role별 그룹화
-        Map<Role, List<UserPoints>> grouped = allPoints.stream()
-                .collect(Collectors.groupingBy(up -> up.getUser().getRole()));
-
+        Map<Long, UserPoints> pointsMap = buildPointsMap();
         List<TeamRankingResponse> teams = new ArrayList<>();
 
-        for (Map.Entry<Role, List<UserPoints>> entry : grouped.entrySet()) {
-            Role teamRole = entry.getKey();
-            List<UserPoints> members = entry.getValue();
+        for (Team team : teamRepository.findAll()) {
+            List<TeamMember> activeMembers = teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE);
+            if (activeMembers.isEmpty()) {
+                continue;
+            }
 
-            long totalPoints = members.stream().mapToLong(UserPoints::getBalance).sum();
-            int avgPoints = members.isEmpty() ? 0 : (int) (totalPoints / members.size());
+            long totalPoints = activeMembers.stream()
+                    .map(TeamMember::getUser)
+                    .map(User::getId)
+                    .map(pointsMap::get)
+                    .filter(Objects::nonNull)
+                    .mapToLong(UserPoints::getBalance)
+                    .sum();
+            int avgPoints = (int) (totalPoints / activeMembers.size());
 
-            // 최고 포인트 멤버
-            String topMember = members.stream()
-                    .max(Comparator.comparingInt(UserPoints::getBalance))
-                    .map(up -> up.getUser().getName())
+            String topMember = activeMembers.stream()
+                    .map(TeamMember::getUser)
+                    .max(Comparator.comparingInt(user -> {
+                        UserPoints userPoints = pointsMap.get(user.getId());
+                        return userPoints != null ? userPoints.getBalance() : 0;
+                    }))
+                    .map(User::getName)
                     .orElse("");
 
             teams.add(TeamRankingResponse.of(
-                    0, // rank는 아래에서 정렬 후 설정
-                    ROLE_TEAM_NAMES.getOrDefault(teamRole.name(), teamRole.getSimpleName()),
-                    members.size(),
+                    0,
+                    team.getId(),
+                    team.getName(),
+                    activeMembers.size(),
                     totalPoints,
                     avgPoints,
                     topMember
             ));
         }
 
-        // 정렬 기준 결정
-        switch (type) {
-            case "level", "streak" ->
-                    teams.sort(Comparator.comparingInt(TeamRankingResponse::getAvgPoints).reversed());
-            default ->
-                    teams.sort(Comparator.comparingLong(TeamRankingResponse::getTotalPoints).reversed());
+        if ("level".equals(type) || "streak".equals(type)) {
+            teams.sort(Comparator.comparingInt(TeamRankingResponse::getAvgPoints).reversed());
+        } else {
+            teams.sort(Comparator.comparingLong(TeamRankingResponse::getTotalPoints).reversed());
         }
 
-        // 순위 부여 및 limit 적용
         List<TeamRankingResponse> result = new ArrayList<>();
         for (int i = 0; i < Math.min(teams.size(), limit); i++) {
-            TeamRankingResponse t = teams.get(i);
+            TeamRankingResponse team = teams.get(i);
             result.add(TeamRankingResponse.of(
-                    i + 1, t.getTeamName(), t.getMemberCount(),
-                    t.getTotalPoints(), t.getAvgPoints(), t.getTopMember()
+                    i + 1,
+                    team.getTeamId(),
+                    team.getTeamName(),
+                    team.getMemberCount(),
+                    team.getTotalPoints(),
+                    team.getAvgPoints(),
+                    team.getTopMember()
             ));
         }
 
         return result;
     }
-
-    // ─── 포인트 랭킹 ───
 
     private List<RankingEntryResponse> getPointsRankings(int limit, Role roleFilter) {
         List<UserPoints> allPoints = userPointsRepository.findAllOrderByBalanceDesc();
-
-        // 보조 데이터 맵 구성
         Map<Long, UserGameProfile> profileMap = buildProfileMap();
         Map<Long, UserStreak> streakMap = buildStreakMap();
 
         List<RankingEntryResponse> result = new ArrayList<>();
         int rank = 0;
 
-        for (UserPoints up : allPoints) {
-            User user = up.getUser();
+        for (UserPoints userPoints : allPoints) {
+            User user = userPoints.getUser();
             if (roleFilter != null && user.getRole() != roleFilter) continue;
 
             rank++;
@@ -169,7 +161,7 @@ public class RankingService {
             result.add(RankingEntryResponse.of(
                     rank, user.getId(), user.getName(),
                     user.getRole().getSimpleName(),
-                    up.getBalance(),
+                    userPoints.getBalance(),
                     profile != null ? profile.getLevel() : 1,
                     streak != null ? streak.getCurrentStreak() : 0
             ));
@@ -177,20 +169,17 @@ public class RankingService {
 
         return result;
     }
-
-    // ─── 레벨 랭킹 ───
 
     private List<RankingEntryResponse> getLevelRankings(int limit, Role roleFilter) {
         List<UserGameProfile> allProfiles = gameProfileRepository.findAllOrderByLevelDesc();
-
         Map<Long, UserPoints> pointsMap = buildPointsMap();
         Map<Long, UserStreak> streakMap = buildStreakMap();
 
         List<RankingEntryResponse> result = new ArrayList<>();
         int rank = 0;
 
-        for (UserGameProfile gp : allProfiles) {
-            User user = gp.getUser();
+        for (UserGameProfile profile : allProfiles) {
+            User user = profile.getUser();
             if (roleFilter != null && user.getRole() != roleFilter) continue;
 
             rank++;
@@ -203,7 +192,7 @@ public class RankingService {
                     rank, user.getId(), user.getName(),
                     user.getRole().getSimpleName(),
                     points != null ? points.getBalance() : 0,
-                    gp.getLevel(),
+                    profile.getLevel(),
                     streak != null ? streak.getCurrentStreak() : 0
             ));
         }
@@ -211,19 +200,16 @@ public class RankingService {
         return result;
     }
 
-    // ─── 스트릭 랭킹 ───
-
     private List<RankingEntryResponse> getStreakRankings(int limit, Role roleFilter) {
         List<UserStreak> allStreaks = userStreakRepository.findAllOrderByCurrentStreakDesc();
-
         Map<Long, UserPoints> pointsMap = buildPointsMap();
         Map<Long, UserGameProfile> profileMap = buildProfileMap();
 
         List<RankingEntryResponse> result = new ArrayList<>();
         int rank = 0;
 
-        for (UserStreak us : allStreaks) {
-            User user = us.getUser();
+        for (UserStreak streak : allStreaks) {
+            User user = streak.getUser();
             if (roleFilter != null && user.getRole() != roleFilter) continue;
 
             rank++;
@@ -237,28 +223,26 @@ public class RankingService {
                     user.getRole().getSimpleName(),
                     points != null ? points.getBalance() : 0,
                     profile != null ? profile.getLevel() : 1,
-                    us.getCurrentStreak()
+                    streak.getCurrentStreak()
             ));
         }
 
         return result;
     }
 
-    // ─── Helper ───
-
     private Map<Long, UserGameProfile> buildProfileMap() {
         return gameProfileRepository.findAll().stream()
-                .collect(Collectors.toMap(gp -> gp.getUser().getId(), gp -> gp, (a, b) -> a));
+                .collect(Collectors.toMap(profile -> profile.getUser().getId(), profile -> profile, (a, b) -> a));
     }
 
     private Map<Long, UserPoints> buildPointsMap() {
         return userPointsRepository.findAll().stream()
-                .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up, (a, b) -> a));
+                .collect(Collectors.toMap(points -> points.getUser().getId(), points -> points, (a, b) -> a));
     }
 
     private Map<Long, UserStreak> buildStreakMap() {
         return userStreakRepository.findAll().stream()
-                .collect(Collectors.toMap(us -> us.getUser().getId(), us -> us, (a, b) -> a));
+                .collect(Collectors.toMap(streak -> streak.getUser().getId(), streak -> streak, (a, b) -> a));
     }
 
     private Role parseRole(String role) {

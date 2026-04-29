@@ -1,6 +1,7 @@
 package com.jinsung.safety_road_inclass.domain.workstop.service;
 
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.quest.event.WorkStopReportedEvent;
 import com.jinsung.safety_road_inclass.domain.workstop.dto.*;
 import com.jinsung.safety_road_inclass.domain.workstop.entity.*;
 import com.jinsung.safety_road_inclass.domain.workstop.repository.RetaliationReportRepository;
@@ -10,6 +11,7 @@ import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class WorkStopService {
     private final WorkStopReportRepository reportRepository;
     private final WorkStopProtectionRepository protectionRepository;
     private final RetaliationReportRepository retaliationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 작업중지 신고 등록
@@ -70,6 +73,12 @@ public class WorkStopService {
 
         log.info("[작업중지] 신고 완료: reportId={}, protectionEndDate={}",
                 report.getId(), protection.getEndDate());
+
+        eventPublisher.publishEvent(new WorkStopReportedEvent(
+                reporter.getId(),
+                report.getId(),
+                LocalDateTime.now()
+        ));
 
         return WorkStopReportResponse.from(report);
     }
