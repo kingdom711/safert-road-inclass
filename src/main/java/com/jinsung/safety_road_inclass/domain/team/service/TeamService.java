@@ -14,7 +14,6 @@ import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -108,13 +107,18 @@ public class TeamService {
                     team.getId(), team.getName(), team.getSiteName(), creator.getId());
 
             return TeamSummaryResponse.of(team, 1L);
+        } catch (CustomException e) {
+            throw e;
         } catch (DataIntegrityViolationException e) {
             log.warn("Team create conflict: site={}, name={}, creator={}", normalizedSite, normalizedName, creatorUserId, e);
             throw new CustomException(ErrorCode.TEAM_NAME_DUPLICATED);
-        } catch (DataAccessException e) {
-            log.error("Team create failed by database access: site={}, name={}, creator={}",
-                    normalizedSite, normalizedName, creatorUserId, e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            log.error("Team create failed: site={}, name={}, creator={}, cause={}: {}",
+                    normalizedSite, normalizedName, creatorUserId,
+                    e.getClass().getName(), e.getMessage(), e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR,
+                    "팀 생성 중 오류: " + e.getClass().getSimpleName()
+                            + (e.getMessage() != null ? " - " + e.getMessage() : ""));
         }
     }
 }
