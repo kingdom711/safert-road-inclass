@@ -32,5 +32,12 @@ public interface StorageService {
      * 저장소 초기화 (디렉토리 생성)
      */
     void init();
+
+    /**
+     * 클라이언트가 접근할 공개 URL을 반환한다.
+     * - dev(LocalStorage): 백엔드 프록시 경로 (/api/v1/files/{filename})
+     * - prod(Supabase Storage): Supabase Public CDN URL 직통
+     */
+    String getPublicUrl(String filename);
 }
 

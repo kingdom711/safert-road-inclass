@@ -95,7 +95,7 @@ public class ChecklistService {
         log.info("체크리스트 제출 완료: checklistId={}, userId={}, riskCount={}", 
                  saved.getId(), currentUser.getId(), saved.getRiskCount());
 
-        return ChecklistResponse.from(saved);
+        return ChecklistResponse.from(saved, storageService);
     }
 
     /**
@@ -122,7 +122,7 @@ public class ChecklistService {
             throw new CustomException(ErrorCode.AUTH_ACCESS_DENIED);
         }
 
-        return ChecklistResponse.from(checklist);
+        return ChecklistResponse.from(checklist, storageService);
     }
 
     /**

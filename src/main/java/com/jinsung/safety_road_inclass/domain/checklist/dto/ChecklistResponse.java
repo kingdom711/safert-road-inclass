@@ -2,6 +2,7 @@ package com.jinsung.safety_road_inclass.domain.checklist.dto;
 
 import com.jinsung.safety_road_inclass.domain.checklist.entity.Checklist;
 import com.jinsung.safety_road_inclass.domain.checklist.entity.ChecklistStatus;
+import com.jinsung.safety_road_inclass.global.service.StorageService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -62,7 +63,7 @@ public class ChecklistResponse {
     @Schema(description = "생성 시간", example = "2025-12-06T09:00:00")
     private LocalDateTime createdAt;
 
-    public static ChecklistResponse from(Checklist checklist) {
+    public static ChecklistResponse from(Checklist checklist, StorageService storageService) {
         return ChecklistResponse.builder()
                 .id(checklist.getId())
                 .templateId(checklist.getTemplate().getId())
@@ -79,7 +80,7 @@ public class ChecklistResponse {
                         .map(ChecklistItemResponse::from)
                         .toList())
                 .photos(checklist.getPhotos().stream()
-                        .map(PhotoResponse::from)
+                        .map(p -> PhotoResponse.from(p, storageService))
                         .toList())
                 .createdAt(checklist.getCreatedAt())
                 .build();

@@ -129,6 +129,14 @@ public class LocalStorageService implements StorageService {
         }
     }
 
+    @Override
+    public String getPublicUrl(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+        return "/api/v1/files/" + filename;
+    }
+
     /**
      * 파일 확장자 추출
      */

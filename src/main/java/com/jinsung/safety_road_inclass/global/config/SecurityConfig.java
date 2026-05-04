@@ -61,6 +61,7 @@ public class SecurityConfig {
                                                                 "/api/v1/auth/signup",
                                                                 "/api/v1/auth/login",
                                                                 "/api/v1/auth/refresh",
+                                                                "/api/v1/auth/verify/request",
                                                                 "/api/v1/auth/password-reset/**")
                                                 .permitAll()
                                                 .requestMatchers("/api/v1/auth/me").authenticated()

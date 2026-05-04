@@ -160,6 +160,16 @@ public class SupabaseStorageService implements StorageService {
         }
     }
 
+    @Override
+    public String getPublicUrl(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+        // Supabase Public Storage CDN URL: 백엔드 프록시 없이 클라이언트가 직접 접근
+        return properties.getUrl() + "/storage/v1/object/public/"
+                + properties.getBucket() + "/" + filename;
+    }
+
     private HttpHeaders createAuthHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(properties.getKey());

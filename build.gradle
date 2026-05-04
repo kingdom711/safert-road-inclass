@@ -59,7 +59,10 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 
-	// Flyway 비활성화 - SQLite는 Flyway Teams 버전 필요하므로 ddl-auto 사용
+	// Flyway (prod/Postgres 마이그레이션 관리)
+	// dev(SQLite)에서는 application-dev.properties에서 비활성화하고 ddl-auto=update 사용
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
 
 	// ULID Creator library (lexicographically sortable unique identifier)
 	implementation 'com.github.f4b6a3:ulid-creator:5.2.3'

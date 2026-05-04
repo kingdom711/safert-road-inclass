@@ -52,9 +52,5 @@ public class Photo extends BaseTimeEntity {
     void setChecklist(Checklist checklist) {
         this.checklist = checklist;
     }
-
-    public String getUrl() {
-        return "/api/v1/files/" + this.storedPath;
-    }
 }
 

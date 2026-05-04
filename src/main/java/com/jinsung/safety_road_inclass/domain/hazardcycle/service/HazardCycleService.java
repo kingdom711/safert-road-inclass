@@ -804,9 +804,6 @@ public class HazardCycleService {
     }
 
     private String toFileUrl(String storedPath) {
-        if (storedPath == null || storedPath.isBlank()) {
-            return null;
-        }
-        return "/api/v1/files/" + storedPath;
+        return storageService.getPublicUrl(storedPath);
     }
 }
