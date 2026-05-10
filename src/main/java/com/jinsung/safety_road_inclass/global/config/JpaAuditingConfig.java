@@ -1,14 +1,22 @@
 package com.jinsung.safety_road_inclass.global.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-/**
- * JPA Auditing Configuration
- * - @CreatedDate, @LastModifiedDate 자동 설정
- */
-@Configuration
-@EnableJpaAuditing
-public class JpaAuditingConfig {
-}
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Optional;
 
+@Configuration
+@EnableJpaAuditing(dateTimeProviderRef = "kstDateTimeProvider")
+public class JpaAuditingConfig {
+
+    private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
+
+    @Bean
+    public DateTimeProvider kstDateTimeProvider() {
+        return () -> Optional.of(LocalDateTime.now(KST_ZONE));
+    }
+}

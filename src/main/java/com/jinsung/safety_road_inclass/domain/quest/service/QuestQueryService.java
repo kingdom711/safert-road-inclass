@@ -3,7 +3,6 @@ package com.jinsung.safety_road_inclass.domain.quest.service;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.gameprofile.service.GameProfileService;
-import com.jinsung.safety_road_inclass.domain.gold.service.GoldService;
 import com.jinsung.safety_road_inclass.domain.point.service.PointService;
 import com.jinsung.safety_road_inclass.domain.quest.dto.ClaimTeamQuestRewardResponse;
 import com.jinsung.safety_road_inclass.domain.quest.dto.TeamQuestListResponse;
@@ -44,6 +43,8 @@ import java.util.Locale;
 @Transactional(readOnly = true)
 public class QuestQueryService {
 
+    private static final int POINTS_PER_GOLD = 1000;
+
     private final UserRepository userRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final TeamRepository teamRepository;
@@ -51,7 +52,6 @@ public class QuestQueryService {
     private final QuestProgressRepository questProgressRepository;
     private final TeamQuestProgressRepository teamQuestProgressRepository;
     private final PointService pointService;
-    private final GoldService goldService;
     private final WorkStopReportRepository workStopReportRepository;
     private final GameProfileService gameProfileService;
 
@@ -205,9 +205,9 @@ public class QuestQueryService {
                 .completed(completed)
                 .rewardClaimed(rewardClaimed)
                 .reward(TeamQuestResponse.Reward.builder()
-                        .points(quest.getRewardPoints())
+                        .points(getExchangeBackedRewardPoints(quest))
                         .exp(quest.getRewardExp())
-                        .gold(quest.getRewardGold())
+                        .gold(0)
                         .build())
                 .members(members)
                 .build();
@@ -258,18 +258,11 @@ public class QuestQueryService {
     }
 
     private void grantReward(User user, QuestDefinition quest) {
-        if (quest.getRewardPoints() > 0) {
+        int rewardPoints = getExchangeBackedRewardPoints(quest);
+        if (rewardPoints > 0) {
             pointService.addPoints(
                     user.getId(),
-                    quest.getRewardPoints(),
-                    "팀 퀘스트 보상",
-                    quest.getTitle() + " 완료 보상"
-            );
-        }
-        if (quest.getRewardGold() > 0) {
-            goldService.addGold(
-                    user.getId(),
-                    quest.getRewardGold(),
+                    rewardPoints,
                     "팀 퀘스트 보상",
                     quest.getTitle() + " 완료 보상"
             );
@@ -281,10 +274,14 @@ public class QuestQueryService {
 
     private TeamQuestResponse.Reward toReward(QuestDefinition quest) {
         return TeamQuestResponse.Reward.builder()
-                .points(quest.getRewardPoints())
+                .points(getExchangeBackedRewardPoints(quest))
                 .exp(quest.getRewardExp())
-                .gold(quest.getRewardGold())
+                .gold(0)
                 .build();
+    }
+
+    private int getExchangeBackedRewardPoints(QuestDefinition quest) {
+        return quest.getRewardPoints() + (quest.getRewardGold() * POINTS_PER_GOLD);
     }
 
     private TeamQuestMemberProgressResponse toMemberResponse(User me, TeamMember member,
