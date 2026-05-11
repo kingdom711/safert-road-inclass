@@ -60,4 +60,12 @@ public interface EducationCompletionRepository extends JpaRepository<EducationCo
     /** 기간별 고유 이수자 수 */
     @Query("SELECT COUNT(DISTINCT e.user.id) FROM EducationCompletion e WHERE e.completedAt BETWEEN :start AND :end AND e.quizPassed = true")
     long countDistinctPassedUsersByPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 부서 대항전용: 주어진 유저 목록 중 기간 내 합격자(unique) 수 */
+    @Query("SELECT COUNT(DISTINCT e.user.id) FROM EducationCompletion e " +
+            "WHERE e.user.id IN :userIds AND e.quizPassed = true " +
+            "AND e.completedAt BETWEEN :start AND :end")
+    long countDistinctPassedUsersByUserIdsAndPeriod(@Param("userIds") java.util.Collection<Long> userIds,
+                                                    @Param("start") LocalDateTime start,
+                                                    @Param("end") LocalDateTime end);
 }

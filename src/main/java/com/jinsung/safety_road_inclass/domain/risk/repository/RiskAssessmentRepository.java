@@ -63,5 +63,22 @@ public interface RiskAssessmentRepository extends JpaRepository<RiskAssessment, 
 
     /** 기간별 특정 위험 레벨 건수 */
     long countByCreatedAtBetweenAndRiskLevel(LocalDateTime start, LocalDateTime end, RiskLevel riskLevel);
+
+    /** 부서 대항전용: 주어진 유저들이 기간 내 등록한 위험성 평가 건수 */
+    @Query("SELECT COUNT(ra) FROM RiskAssessment ra " +
+            "WHERE ra.assessedBy.id IN :userIds " +
+            "AND ra.assessedAt BETWEEN :start AND :end")
+    long countByAssessorUserIdsAndPeriod(@Param("userIds") java.util.Collection<Long> userIds,
+                                         @Param("start") LocalDateTime start,
+                                         @Param("end") LocalDateTime end);
+
+    /** 부서 대항전용: 주어진 유저들의 기간 내 고위험(HIGH/CRITICAL) 건수 */
+    @Query("SELECT COUNT(ra) FROM RiskAssessment ra " +
+            "WHERE ra.assessedBy.id IN :userIds " +
+            "AND ra.riskLevel IN ('HIGH', 'CRITICAL') " +
+            "AND ra.assessedAt BETWEEN :start AND :end")
+    long countHighRiskByAssessorUserIdsAndPeriod(@Param("userIds") java.util.Collection<Long> userIds,
+                                                 @Param("start") LocalDateTime start,
+                                                 @Param("end") LocalDateTime end);
 }
 

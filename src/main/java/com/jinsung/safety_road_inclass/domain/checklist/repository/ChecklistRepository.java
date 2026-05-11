@@ -61,5 +61,14 @@ public interface ChecklistRepository extends JpaRepository<Checklist, Long> {
 
     /** 기간별 제출 건수 */
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    /** 부서 대항전용: 주어진 유저들이 기간 내 제출(SUBMITTED 이상)한 체크리스트의 고유 작성자 수 */
+    @Query("SELECT COUNT(DISTINCT c.createdBy.id) FROM Checklist c " +
+            "WHERE c.createdBy.id IN :userIds " +
+            "AND c.status <> 'DRAFT' " +
+            "AND c.submittedAt BETWEEN :start AND :end")
+    long countDistinctSubmittersByUserIdsAndPeriod(@Param("userIds") java.util.Collection<Long> userIds,
+                                                   @Param("start") LocalDateTime start,
+                                                   @Param("end") LocalDateTime end);
 }
 

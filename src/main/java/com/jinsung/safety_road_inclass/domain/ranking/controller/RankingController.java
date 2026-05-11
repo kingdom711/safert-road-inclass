@@ -1,9 +1,11 @@
 package com.jinsung.safety_road_inclass.domain.ranking.controller;
 
 import com.jinsung.safety_road_inclass.domain.auth.service.JwtTokenProvider.CustomUserPrincipal;
+import com.jinsung.safety_road_inclass.domain.ranking.dto.DepartmentBattleResponse;
 import com.jinsung.safety_road_inclass.domain.ranking.dto.MyRankResponse;
 import com.jinsung.safety_road_inclass.domain.ranking.dto.RankingEntryResponse;
 import com.jinsung.safety_road_inclass.domain.ranking.dto.TeamRankingResponse;
+import com.jinsung.safety_road_inclass.domain.ranking.service.DepartmentBattleService;
 import com.jinsung.safety_road_inclass.domain.ranking.service.RankingService;
 import com.jinsung.safety_road_inclass.global.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +31,7 @@ import java.util.List;
 public class RankingController {
 
     private final RankingService rankingService;
+    private final DepartmentBattleService departmentBattleService;
 
     @Operation(summary = "개인 랭킹 조회", description = "포인트/레벨/스트릭 기준 전체 사용자 랭킹을 조회합니다.")
     @GetMapping("/api/v1/users/rankings")
@@ -57,5 +60,14 @@ public class RankingController {
             @RequestParam(defaultValue = "10") int limit) {
         List<TeamRankingResponse> teamRankings = rankingService.getTeamRankings(type, limit);
         return ApiResponse.success(teamRankings);
+    }
+
+    @Operation(summary = "부서 대항전 조회",
+            description = "이번 달 부서별 안전 종합 점수(퀘스트/교육/위험신고/무재해/체크리스트)와 순위를 반환합니다.")
+    @GetMapping("/api/v1/teams/battle")
+    public ApiResponse<DepartmentBattleResponse> getDepartmentBattle(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserPrincipal principal) {
+        Long userId = principal != null ? principal.userId() : null;
+        return ApiResponse.success(departmentBattleService.getBattle(userId));
     }
 }
