@@ -140,7 +140,11 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(t1, "id", 100L);
 
         when(teamRepository.findBySiteNameOrderByNameAsc("판교현장")).thenReturn(List.of(t1));
-        when(teamMemberRepository.countByTeamAndStatus(eq(t1), eq(MembershipStatus.ACTIVE))).thenReturn(3L);
+        when(teamMemberRepository.countByTeamAndStatusAndUserRoleNotIn(
+                eq(t1),
+                eq(MembershipStatus.ACTIVE),
+                eq(List.of(Role.ROLE_ADMIN, Role.ROLE_PROJECT_ADMIN))
+        )).thenReturn(3L);
 
         List<TeamSummaryResponse> res = teamService.search("판교현장", null);
         assertThat(res).hasSize(1);

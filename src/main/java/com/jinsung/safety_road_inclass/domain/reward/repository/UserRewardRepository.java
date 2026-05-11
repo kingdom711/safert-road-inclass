@@ -14,4 +14,8 @@ public interface UserRewardRepository extends JpaRepository<UserReward, Long> {
     List<UserReward> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     List<UserReward> findByStatusOrderByCreatedAtAsc(RewardStatus status);
+
+    List<UserReward> findAllByOrderByCreatedAtDesc();
+
+    long countByStatus(RewardStatus status);
 }

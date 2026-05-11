@@ -35,6 +35,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RankingService {
 
+    private static final List<Role> NON_PARTICIPANT_ROLES =
+            List.of(Role.ROLE_ADMIN, Role.ROLE_PROJECT_ADMIN);
+
     private final UserPointsRepository userPointsRepository;
     private final UserStreakRepository userStreakRepository;
     private final GameProfileRepository gameProfileRepository;
@@ -53,6 +56,14 @@ public class RankingService {
     }
 
     public MyRankResponse getMyRank(Long userId, String type) {
+        User currentUser = userRepository.findById(userId).orElse(null);
+        if (currentUser == null) {
+            return MyRankResponse.of(0, 0, userId, "", "", 0, 1, 0);
+        }
+        if (!isParticipant(currentUser)) {
+            return MyRankResponse.of(0, 0, userId, currentUser.getName(), currentUser.getRole().getSimpleName(), 0, 1, 0);
+        }
+
         List<RankingEntryResponse> allRankings = getRankings(type, Integer.MAX_VALUE, null);
         int totalUsers = allRankings.size();
 
@@ -66,14 +77,9 @@ public class RankingService {
             }
         }
 
-        User user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            return MyRankResponse.of(0, totalUsers, userId, "", "", 0, 1, 0);
-        }
-
         return MyRankResponse.of(
                 totalUsers + 1, totalUsers, userId,
-                user.getName(), user.getRole().getSimpleName(),
+                currentUser.getName(), currentUser.getRole().getSimpleName(),
                 0, 1, 0
         );
     }
@@ -83,7 +89,11 @@ public class RankingService {
         List<TeamRankingResponse> teams = new ArrayList<>();
 
         for (Team team : teamRepository.findAll()) {
-            List<TeamMember> activeMembers = teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE);
+            List<TeamMember> activeMembers = teamMemberRepository.findAllByTeamAndStatusAndUserRoleNotIn(
+                    team,
+                    MembershipStatus.ACTIVE,
+                    NON_PARTICIPANT_ROLES
+            );
             if (activeMembers.isEmpty()) {
                 continue;
             }
@@ -150,6 +160,7 @@ public class RankingService {
 
         for (UserPoints userPoints : allPoints) {
             User user = userPoints.getUser();
+            if (!isParticipant(user)) continue;
             if (roleFilter != null && user.getRole() != roleFilter) continue;
 
             rank++;
@@ -180,6 +191,7 @@ public class RankingService {
 
         for (UserGameProfile profile : allProfiles) {
             User user = profile.getUser();
+            if (!isParticipant(user)) continue;
             if (roleFilter != null && user.getRole() != roleFilter) continue;
 
             rank++;
@@ -210,6 +222,7 @@ public class RankingService {
 
         for (UserStreak streak : allStreaks) {
             User user = streak.getUser();
+            if (!isParticipant(user)) continue;
             if (roleFilter != null && user.getRole() != roleFilter) continue;
 
             rank++;
@@ -257,5 +270,11 @@ public class RankingService {
             log.warn("Invalid role filter: {}", role);
             return null;
         }
+    }
+
+    private boolean isParticipant(User user) {
+        return user != null
+                && !NON_PARTICIPANT_ROLES.contains(user.getRole())
+                && !"admin".equalsIgnoreCase(user.getUsername());
     }
 }

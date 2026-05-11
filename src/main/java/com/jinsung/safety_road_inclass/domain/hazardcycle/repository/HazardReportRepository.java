@@ -27,6 +27,12 @@ public interface HazardReportRepository extends JpaRepository<HazardReport, Long
 
     long countByReporterIdAndStatus(Long reporterId, CycleStatus status);
 
+    long countByReportedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByStatusIn(List<CycleStatus> statuses);
+
+    Page<HazardReport> findAllByOrderByReportedAtDesc(Pageable pageable);
+
     @Query("SELECT h.aiRiskLevel, COUNT(h) FROM HazardReport h " +
             "WHERE h.reporter.id = :reporterId AND h.aiRiskLevel IS NOT NULL GROUP BY h.aiRiskLevel")
     List<Object[]> countByRiskLevel(@Param("reporterId") Long reporterId);

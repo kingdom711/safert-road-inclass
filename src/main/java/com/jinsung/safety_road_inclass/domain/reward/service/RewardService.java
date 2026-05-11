@@ -120,6 +120,13 @@ public class RewardService {
                                 .collect(Collectors.toList());
         }
 
+        public List<UserRewardResponse> getAllUserRewards() {
+                return userRewardRepository.findAllByOrderByCreatedAtDesc()
+                                .stream()
+                                .map(UserRewardResponse::from)
+                                .collect(Collectors.toList());
+        }
+
         /**
          * 교환 요청 승인 (관리자) → 쿠폰코드 생성 + 인벤토리 전송
          */

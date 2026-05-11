@@ -1,5 +1,6 @@
 package com.jinsung.safety_road_inclass.domain.team.service;
 
+import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.team.dto.TeamCreateRequest;
@@ -34,6 +35,8 @@ import java.util.List;
 public class TeamService {
 
     private static final int SEARCH_LIMIT = 20;
+    private static final List<Role> NON_PARTICIPANT_ROLES =
+            List.of(Role.ROLE_ADMIN, Role.ROLE_PROJECT_ADMIN);
 
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
@@ -55,10 +58,14 @@ public class TeamService {
         }
 
         return teams.stream()
+                .filter(team -> isParticipant(team.getLeader()))
                 .limit(SEARCH_LIMIT)
                 .map(team -> TeamSummaryResponse.of(
                         team,
-                        teamMemberRepository.countByTeamAndStatus(team, MembershipStatus.ACTIVE)))
+                        teamMemberRepository.countByTeamAndStatusAndUserRoleNotIn(
+                                team,
+                                MembershipStatus.ACTIVE,
+                                NON_PARTICIPANT_ROLES)))
                 .toList();
     }
 
@@ -77,6 +84,7 @@ public class TeamService {
 
         User creator = userRepository.findById(creatorUserId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        ensureParticipant(creator);
 
         if (teamMemberRepository.existsByUserAndStatus(creator, MembershipStatus.ACTIVE)) {
             throw new CustomException(ErrorCode.TEAM_ALREADY_JOINED);
@@ -120,5 +128,17 @@ public class TeamService {
                     "팀 생성 중 오류: " + e.getClass().getSimpleName()
                             + (e.getMessage() != null ? " - " + e.getMessage() : ""));
         }
+    }
+
+    private void ensureParticipant(User user) {
+        if (!isParticipant(user)) {
+            throw new CustomException(ErrorCode.TEAM_MEMBERSHIP_NOT_FOUND);
+        }
+    }
+
+    private boolean isParticipant(User user) {
+        return user != null
+                && !NON_PARTICIPANT_ROLES.contains(user.getRole())
+                && !"admin".equalsIgnoreCase(user.getUsername());
     }
 }

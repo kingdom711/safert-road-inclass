@@ -32,6 +32,11 @@ public class AdminRewardController {
     /**
      * 교환 요청 승인 → 쿠폰코드 생성 + 인벤토리 전송
      */
+    @GetMapping("/exchanges")
+    public ResponseEntity<List<UserRewardResponse>> getAllRewards() {
+        return ResponseEntity.ok(rewardService.getAllUserRewards());
+    }
+
     @PostMapping("/{userRewardId}/approve")
     public ResponseEntity<UserRewardResponse> approveReward(
             @PathVariable Long userRewardId) {

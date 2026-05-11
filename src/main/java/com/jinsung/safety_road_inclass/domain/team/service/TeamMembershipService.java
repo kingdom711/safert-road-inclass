@@ -2,6 +2,7 @@ package com.jinsung.safety_road_inclass.domain.team.service;
 
 import com.jinsung.safety_road_inclass.domain.alert.entity.AlertType;
 import com.jinsung.safety_road_inclass.domain.alert.service.AlertService;
+import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.team.dto.MembershipResponse;
@@ -37,6 +38,9 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class TeamMembershipService {
 
+    private static final List<Role> NON_PARTICIPANT_ROLES =
+            List.of(Role.ROLE_ADMIN, Role.ROLE_PROJECT_ADMIN);
+
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
@@ -44,6 +48,9 @@ public class TeamMembershipService {
 
     public MembershipResponse getCurrentMembership(Long userId) {
         User user = getUser(userId);
+        if (!isParticipant(user)) {
+            return null;
+        }
         return teamMemberRepository.findByUserAndStatus(user, MembershipStatus.ACTIVE)
                 .or(() -> teamMemberRepository.findByUserAndStatus(user, MembershipStatus.PENDING))
                 .or(() -> teamMemberRepository.findByUserAndStatus(user, MembershipStatus.LEFT))
@@ -55,6 +62,7 @@ public class TeamMembershipService {
     public MembershipResponse requestJoin(Long teamId, Long applicantUserId) {
         Team team = getTeam(teamId);
         User applicant = getUser(applicantUserId);
+        ensureParticipant(applicant);
 
         if (teamMemberRepository.existsByUserAndStatus(applicant, MembershipStatus.ACTIVE)) {
             throw new CustomException(ErrorCode.TEAM_ALREADY_JOINED);
@@ -101,7 +109,7 @@ public class TeamMembershipService {
     public List<TeamMemberResponse> listActiveMembers(Long teamId, Long requesterUserId) {
         Team team = getTeam(teamId);
         ensureActiveMember(team, requesterUserId);
-        return teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE).stream()
+        return teamMemberRepository.findAllByTeamAndStatusAndUserRoleNotIn(team, MembershipStatus.ACTIVE, NON_PARTICIPANT_ROLES).stream()
                 .map(TeamMemberResponse::of)
                 .toList();
     }
@@ -235,10 +243,23 @@ public class TeamMembershipService {
 
     private void ensureActiveMember(Team team, Long requesterUserId) {
         User requester = getUser(requesterUserId);
+        ensureParticipant(requester);
         TeamMember membership = teamMemberRepository.findByTeamAndUser(team, requester)
                 .orElseThrow(() -> new CustomException(ErrorCode.TEAM_MEMBERSHIP_NOT_FOUND));
         if (!membership.isActive()) {
             throw new CustomException(ErrorCode.TEAM_MEMBERSHIP_INVALID_STATUS);
         }
+    }
+
+    private void ensureParticipant(User user) {
+        if (!isParticipant(user)) {
+            throw new CustomException(ErrorCode.TEAM_MEMBERSHIP_NOT_FOUND);
+        }
+    }
+
+    private boolean isParticipant(User user) {
+        return user != null
+                && !NON_PARTICIPANT_ROLES.contains(user.getRole())
+                && !"admin".equalsIgnoreCase(user.getUsername());
     }
 }
