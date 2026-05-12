@@ -11,10 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * AdminAccountSeeder - 관리자 계정 초기화
+ * Seeds the legacy admin account used for feature verification only.
  *
- * 모든 환경(로컬/배포)에서 실행됩니다.
- * admin 계정이 없으면 자동으로 생성합니다.
+ * This account is intentionally separate from the operational project-admin
+ * role and should not be treated as the primary production admin account.
  */
 @Slf4j
 @Component
@@ -29,7 +29,7 @@ public class AdminAccountSeeder implements CommandLineRunner {
     public void run(String... args) {
         try {
             if (userRepository.existsByUsername("admin")) {
-                log.info("admin 계정이 이미 존재합니다.");
+                log.info("Legacy admin verification account already exists.");
                 return;
             }
 
@@ -44,9 +44,9 @@ public class AdminAccountSeeder implements CommandLineRunner {
             admin.encodePassword(passwordEncoder);
             userRepository.save(admin);
 
-            log.info("=== admin 계정 생성 완료 (ROLE_ADMIN, 모든 역할 기능 사용 가능) ===");
+            log.info("Legacy admin verification account created (ROLE_ADMIN).");
         } catch (Exception e) {
-            log.error("admin 계정 생성 중 오류 발생: {}", e.getMessage(), e);
+            log.error("Failed to create legacy admin verification account: {}", e.getMessage(), e);
         }
     }
 }

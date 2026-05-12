@@ -5,7 +5,6 @@ import com.jinsung.safety_road_inclass.domain.alert.service.AlertService;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.gameprofile.service.GameProfileService;
-import com.jinsung.safety_road_inclass.domain.gold.service.GoldService;
 import com.jinsung.safety_road_inclass.domain.point.service.PointService;
 import com.jinsung.safety_road_inclass.domain.quest.entity.QuestConditionType;
 import com.jinsung.safety_road_inclass.domain.quest.entity.QuestDefinition;
@@ -46,7 +45,6 @@ public class QuestProgressListener {
     private final QuestProgressRepository questProgressRepository;
     private final TeamQuestProgressRepository teamQuestProgressRepository;
     private final PointService pointService;
-    private final GoldService goldService;
     private final GameProfileService gameProfileService;
     private final AlertService alertService;
 
@@ -135,7 +133,8 @@ public class QuestProgressListener {
                 gameProfileService.addExp(user.getId(), quest.getRewardExp(), "팀 퀘스트 보상: " + quest.getTitle());
             }
             if (quest.getRewardGold() > 0) {
-                goldService.addGold(user.getId(), quest.getRewardGold(), "팀 퀘스트 보상",
+                // 골드 보상은 포인트 적립으로 통일 (보상센터 흐름은 별도 유지)
+                pointService.addPoints(user.getId(), quest.getRewardGold(), "팀 퀘스트 보상(골드→포인트)",
                         quest.getTitle() + " 완료 보상");
             }
             alertService.createTeamNotification(

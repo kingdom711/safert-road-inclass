@@ -187,11 +187,12 @@ public class DepartmentBattleService {
     }
 
     private static List<RewardEntry> buildRewards() {
+        // 1위 5000P 기준, 2위부터 직전 순위의 50% 체감
         List<RewardEntry> list = new ArrayList<>();
-        list.add(RewardEntry.builder().rank(1).reward("팀원 전원 1000G + 단체 회식 쿠폰").gold(1000).icon("🥇").build());
-        list.add(RewardEntry.builder().rank(2).reward("팀원 전원 500G").gold(500).icon("🥈").build());
-        list.add(RewardEntry.builder().rank(3).reward("팀원 전원 300G").gold(300).icon("🥉").build());
-        list.add(RewardEntry.builder().rank(0).reward("참여 부서 전원 100G").gold(100).icon("🏅").build());
+        list.add(RewardEntry.builder().rank(1).reward("팀원 전원 5,000P").points(5000).icon("🥇").build());
+        list.add(RewardEntry.builder().rank(2).reward("팀원 전원 2,500P").points(2500).icon("🥈").build());
+        list.add(RewardEntry.builder().rank(3).reward("팀원 전원 1,250P").points(1250).icon("🥉").build());
+        list.add(RewardEntry.builder().rank(0).reward("참여 부서 전원 625P").points(625).icon("🏅").build());
         return list;
     }
 }

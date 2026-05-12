@@ -43,7 +43,8 @@ import java.util.Locale;
 @Transactional(readOnly = true)
 public class QuestQueryService {
 
-    private static final int POINTS_PER_GOLD = 1000;
+    // 골드 보상은 1:1 포인트로 적립되도록 통일됨
+    private static final int POINTS_PER_GOLD = 1;
 
     private final UserRepository userRepository;
     private final TeamMemberRepository teamMemberRepository;

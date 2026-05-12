@@ -1,6 +1,5 @@
 package com.jinsung.safety_road_inclass.domain.hazardcycle.service;
 
-import com.jinsung.safety_road_inclass.domain.gold.service.GoldService;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.entity.HazardReport;
 import com.jinsung.safety_road_inclass.domain.point.dto.AddPointsResponse;
 import com.jinsung.safety_road_inclass.domain.point.dto.PointsResponse;
@@ -23,12 +22,12 @@ import java.time.LocalDateTime;
 public class CycleRewardService {
 
     private final PointService pointService;
-    private final GoldService goldService;
 
     public static final int TIER1_POINTS = 100;
     public static final int TIER2_POINTS = 100;
-    private static final int TIER1_GOLD = 10;
-    private static final int TIER2_GOLD = 10;
+    // 보너스 포인트 (구 골드 보상을 1:1 포인트로 통일)
+    private static final int TIER1_BONUS_POINTS = 10;
+    private static final int TIER2_BONUS_POINTS = 10;
 
     @Transactional
     public RewardGrant awardTier1(HazardReport report) {
@@ -43,11 +42,11 @@ public class CycleRewardService {
                 "Hazard Cycle 1단계 보상",
                 "위험 발견 및 AI 분석 완료 보상");
 
-        goldService.addGold(
+        pointService.addPoints(
                 report.getReporter().getId(),
-                TIER1_GOLD,
-                "Hazard Cycle 1단계 골드",
-                "위험 발견 활동 보너스 골드");
+                TIER1_BONUS_POINTS,
+                "Hazard Cycle 1단계 보너스",
+                "위험 발견 활동 보너스 포인트");
 
         report.awardTier1(TIER1_POINTS, LocalDateTime.now());
 
@@ -70,11 +69,11 @@ public class CycleRewardService {
                 "Hazard Cycle 2단계 보상",
                 "조치 완료 검증 보상");
 
-        goldService.addGold(
+        pointService.addPoints(
                 report.getReporter().getId(),
-                TIER2_GOLD,
-                "Hazard Cycle 2단계 골드",
-                "조치 완료 활동 보너스 골드");
+                TIER2_BONUS_POINTS,
+                "Hazard Cycle 2단계 보너스",
+                "조치 완료 활동 보너스 포인트");
 
         report.awardTier2(TIER2_POINTS, LocalDateTime.now());
 

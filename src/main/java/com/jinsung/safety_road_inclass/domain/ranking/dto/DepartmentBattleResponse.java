@@ -61,7 +61,7 @@ public class DepartmentBattleResponse {
         /** 1, 2, 3, 0(참여 부서) */
         private int rank;
         private String reward;
-        private int gold;
+        private int points;
         private String icon;
     }
 }
