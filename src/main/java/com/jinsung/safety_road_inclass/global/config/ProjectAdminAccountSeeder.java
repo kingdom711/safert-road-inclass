@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -47,7 +48,15 @@ public class ProjectAdminAccountSeeder implements CommandLineRunner {
                 .isVerified(true)
                 .build();
         projectAdmin.encodePassword(passwordEncoder);
-        userRepository.save(projectAdmin);
+        try {
+            userRepository.save(projectAdmin);
+        } catch (DataIntegrityViolationException e) {
+            log.warn(
+                    "Project admin account seeding skipped: database schema does not allow ROLE_PROJECT_ADMIN yet. "
+                            + "Use the existing ROLE_ADMIN account or update the users_role_check constraint.",
+                    e);
+            return;
+        }
 
         log.info("Project admin account created: {}", username);
     }
