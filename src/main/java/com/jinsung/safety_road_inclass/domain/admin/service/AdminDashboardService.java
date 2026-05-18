@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,7 +35,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class AdminDashboardService {
 
     private static final List<ReportStatus> CLOSED_WORK_STOP_STATUSES =
@@ -58,33 +56,38 @@ public class AdminDashboardService {
 
     public AdminDashboardSummaryResponse getSummary() {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
+        try {
+            LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+            LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
 
-        var metrics = AdminDashboardSummaryResponse.Metrics.builder()
-                .totalUsers(safeCount("total users", () -> userRepository.countParticipants(NON_PARTICIPANT_ROLES)))
-                .totalTeams(safeCount("total teams", teamRepository::count))
-                .todayEducationCompletions(safeCount("today education completions",
-                        () -> educationCompletionRepository.countByCompletedAtBetween(todayStart, todayEnd)))
-                .todayChecklistSubmissions(safeCount("today checklist submissions",
-                        () -> checklistRepository.countByCreatedAtBetween(todayStart, todayEnd)))
-                .todayHazardReports(safeCount("today hazard reports",
-                        () -> hazardReportRepository.countByReportedAtBetween(todayStart, todayEnd)))
-                .openWorkStopReports(safeCount("open work-stop reports",
-                        () -> workStopReportRepository.countByStatusNotIn(CLOSED_WORK_STOP_STATUSES)))
-                .pendingRewardRequests(safeCount("pending reward requests",
-                        () -> userRewardRepository.countByStatus(RewardStatus.PENDING)))
-                .openHazardCycles(safeCount("open hazard cycles",
-                        () -> hazardReportRepository.countByStatusIn(OPEN_HAZARD_STATUSES)))
-                .build();
+            var metrics = AdminDashboardSummaryResponse.Metrics.builder()
+                    .totalUsers(safeCount("total users", () -> userRepository.countParticipants(NON_PARTICIPANT_ROLES)))
+                    .totalTeams(safeCount("total teams", teamRepository::count))
+                    .todayEducationCompletions(safeCount("today education completions",
+                            () -> educationCompletionRepository.countByCompletedAtBetween(todayStart, todayEnd)))
+                    .todayChecklistSubmissions(safeCount("today checklist submissions",
+                            () -> checklistRepository.countByCreatedAtBetween(todayStart, todayEnd)))
+                    .todayHazardReports(safeCount("today hazard reports",
+                            () -> hazardReportRepository.countByReportedAtBetween(todayStart, todayEnd)))
+                    .openWorkStopReports(safeCount("open work-stop reports",
+                            () -> workStopReportRepository.countByStatusNotIn(CLOSED_WORK_STOP_STATUSES)))
+                    .pendingRewardRequests(safeCount("pending reward requests",
+                            () -> userRewardRepository.countByStatus(RewardStatus.PENDING)))
+                    .openHazardCycles(safeCount("open hazard cycles",
+                            () -> hazardReportRepository.countByStatusIn(OPEN_HAZARD_STATUSES)))
+                    .build();
 
-        return AdminDashboardSummaryResponse.builder()
-                .generatedAt(now)
-                .metrics(metrics)
-                .actionItems(buildActionItems())
-                .recentActivities(buildRecentActivities())
-                .workStopByHazardType(loadWorkStopHazardStats(todayStart.minusDays(30), todayEnd))
-                .build();
+            return AdminDashboardSummaryResponse.builder()
+                    .generatedAt(now)
+                    .metrics(metrics)
+                    .actionItems(buildActionItems())
+                    .recentActivities(buildRecentActivities())
+                    .workStopByHazardType(loadWorkStopHazardStats(todayStart.minusDays(30), todayEnd))
+                    .build();
+        } catch (Exception e) {
+            log.error("Admin dashboard summary failed; returning empty summary", e);
+            return emptySummary(now);
+        }
     }
 
     private List<AdminDashboardSummaryResponse.ActionItem> buildActionItems() {
@@ -227,5 +230,24 @@ public class AdminDashboardService {
             return hazardType.getLabel();
         }
         return nameOf(value);
+    }
+
+    private AdminDashboardSummaryResponse emptySummary(LocalDateTime generatedAt) {
+        return AdminDashboardSummaryResponse.builder()
+                .generatedAt(generatedAt)
+                .metrics(AdminDashboardSummaryResponse.Metrics.builder()
+                        .totalUsers(0)
+                        .totalTeams(0)
+                        .todayEducationCompletions(0)
+                        .todayChecklistSubmissions(0)
+                        .todayHazardReports(0)
+                        .openWorkStopReports(0)
+                        .pendingRewardRequests(0)
+                        .openHazardCycles(0)
+                        .build())
+                .actionItems(Collections.emptyList())
+                .recentActivities(Collections.emptyList())
+                .workStopByHazardType(Collections.emptyMap())
+                .build();
     }
 }
