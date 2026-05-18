@@ -11,9 +11,11 @@ import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardRepor
 import com.jinsung.safety_road_inclass.domain.reward.entity.RewardStatus;
 import com.jinsung.safety_road_inclass.domain.reward.repository.UserRewardRepository;
 import com.jinsung.safety_road_inclass.domain.team.repository.TeamRepository;
+import com.jinsung.safety_road_inclass.domain.workstop.entity.HazardType;
 import com.jinsung.safety_road_inclass.domain.workstop.entity.ReportStatus;
 import com.jinsung.safety_road_inclass.domain.workstop.repository.WorkStopReportRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +24,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -54,14 +62,20 @@ public class AdminDashboardService {
         LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
 
         var metrics = AdminDashboardSummaryResponse.Metrics.builder()
-                .totalUsers(userRepository.countParticipants(NON_PARTICIPANT_ROLES))
-                .totalTeams(teamRepository.count())
-                .todayEducationCompletions(educationCompletionRepository.countByCompletedAtBetween(todayStart, todayEnd))
-                .todayChecklistSubmissions(checklistRepository.countByCreatedAtBetween(todayStart, todayEnd))
-                .todayHazardReports(hazardReportRepository.countByReportedAtBetween(todayStart, todayEnd))
-                .openWorkStopReports(workStopReportRepository.countByStatusNotIn(CLOSED_WORK_STOP_STATUSES))
-                .pendingRewardRequests(userRewardRepository.countByStatus(RewardStatus.PENDING))
-                .openHazardCycles(hazardReportRepository.countByStatusIn(OPEN_HAZARD_STATUSES))
+                .totalUsers(safeCount("total users", () -> userRepository.countParticipants(NON_PARTICIPANT_ROLES)))
+                .totalTeams(safeCount("total teams", teamRepository::count))
+                .todayEducationCompletions(safeCount("today education completions",
+                        () -> educationCompletionRepository.countByCompletedAtBetween(todayStart, todayEnd)))
+                .todayChecklistSubmissions(safeCount("today checklist submissions",
+                        () -> checklistRepository.countByCreatedAtBetween(todayStart, todayEnd)))
+                .todayHazardReports(safeCount("today hazard reports",
+                        () -> hazardReportRepository.countByReportedAtBetween(todayStart, todayEnd)))
+                .openWorkStopReports(safeCount("open work-stop reports",
+                        () -> workStopReportRepository.countByStatusNotIn(CLOSED_WORK_STOP_STATUSES)))
+                .pendingRewardRequests(safeCount("pending reward requests",
+                        () -> userRewardRepository.countByStatus(RewardStatus.PENDING)))
+                .openHazardCycles(safeCount("open hazard cycles",
+                        () -> hazardReportRepository.countByStatusIn(OPEN_HAZARD_STATUSES)))
                 .build();
 
         return AdminDashboardSummaryResponse.builder()
@@ -76,45 +90,52 @@ public class AdminDashboardService {
     private List<AdminDashboardSummaryResponse.ActionItem> buildActionItems() {
         List<AdminDashboardSummaryResponse.ActionItem> items = new ArrayList<>();
 
-        workStopReportRepository.findAllByOrderByCreatedAtDesc().stream()
+        safeList("work-stop action items", workStopReportRepository::findAllByOrderByCreatedAtDesc).stream()
                 .filter(report -> !CLOSED_WORK_STOP_STATUSES.contains(report.getStatus()))
                 .limit(5)
                 .map(report -> AdminDashboardSummaryResponse.ActionItem.builder()
                         .type("WORK_STOP")
                         .title("작업중지 신고 확인")
-                        .detail(report.getZone() + " / " + report.getHazardType().getLabel())
-                        .status(report.getStatus().name())
+                        .detail(joinDetail(report.getZone(), labelOf(report.getHazardType())))
+                        .status(nameOf(report.getStatus()))
                         .href("/work-stop-history")
                         .createdAt(report.getCreatedAt())
                         .build())
                 .forEach(items::add);
 
-        userRewardRepository.findByStatusOrderByCreatedAtAsc(RewardStatus.PENDING).stream()
+        safeList("reward action items",
+                () -> userRewardRepository.findByStatusOrderByCreatedAtAsc(RewardStatus.PENDING)).stream()
                 .limit(5)
                 .map(reward -> AdminDashboardSummaryResponse.ActionItem.builder()
                         .type("REWARD")
                         .title("보상 교환 승인")
-                        .detail(reward.getUser().getName() + " / " + reward.getReward().getName())
-                        .status(reward.getStatus().name())
+                        .detail(joinDetail(
+                                reward.getUser() == null ? null : reward.getUser().getName(),
+                                reward.getReward() == null ? null : reward.getReward().getName()))
+                        .status(nameOf(reward.getStatus()))
                         .href("/admin/reward-approval")
                         .createdAt(reward.getCreatedAt())
                         .build())
                 .forEach(items::add);
 
-        checklistRepository.findWithRiskItems(ChecklistStatus.SUBMITTED).stream()
+        safeList("checklist action items",
+                () -> checklistRepository.findWithRiskItems(ChecklistStatus.SUBMITTED)).stream()
                 .limit(5)
                 .map(checklist -> AdminDashboardSummaryResponse.ActionItem.builder()
                         .type("CHECKLIST")
                         .title("위험 항목 체크리스트 검토")
-                        .detail(checklist.getSiteName() + " / " + checklist.getCreatedBy().getName())
-                        .status(checklist.getStatus().name())
+                        .detail(joinDetail(
+                                checklist.getSiteName(),
+                                checklist.getCreatedBy() == null ? null : checklist.getCreatedBy().getName()))
+                        .status(nameOf(checklist.getStatus()))
                         .href("/risk-solution")
                         .createdAt(checklist.getCreatedAt())
                         .build())
                 .forEach(items::add);
 
         return items.stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .filter(item -> item.getCreatedAt() != null)
+                .sorted(Comparator.comparing(AdminDashboardSummaryResponse.ActionItem::getCreatedAt).reversed())
                 .limit(10)
                 .toList();
     }
@@ -122,7 +143,8 @@ public class AdminDashboardService {
     private List<AdminDashboardSummaryResponse.RecentActivity> buildRecentActivities() {
         List<AdminDashboardSummaryResponse.RecentActivity> items = new ArrayList<>();
 
-        hazardReportRepository.findAllByOrderByReportedAtDesc(PageRequest.of(0, 5)).stream()
+        safeList("hazard recent activities",
+                () -> hazardReportRepository.findAllByOrderByReportedAtDesc(PageRequest.of(0, 5)).getContent()).stream()
                 .map(report -> AdminDashboardSummaryResponse.RecentActivity.builder()
                         .type("HAZARD")
                         .title("위험요소 신고")
@@ -131,27 +153,79 @@ public class AdminDashboardService {
                         .build())
                 .forEach(items::add);
 
-        workStopReportRepository.findAllByOrderByCreatedAtDesc().stream()
+        safeList("work-stop recent activities", workStopReportRepository::findAllByOrderByCreatedAtDesc).stream()
                 .limit(5)
                 .map(report -> AdminDashboardSummaryResponse.RecentActivity.builder()
                         .type("WORK_STOP")
                         .title("작업중지 신고")
-                        .detail(report.getZone() + " / " + report.getStatus().getLabel())
+                        .detail(joinDetail(report.getZone(), labelOf(report.getStatus())))
                         .occurredAt(report.getCreatedAt())
                         .build())
                 .forEach(items::add);
 
         return items.stream()
-                .sorted((a, b) -> b.getOccurredAt().compareTo(a.getOccurredAt()))
+                .filter(item -> item.getOccurredAt() != null)
+                .sorted(Comparator.comparing(AdminDashboardSummaryResponse.RecentActivity::getOccurredAt).reversed())
                 .limit(10)
                 .toList();
     }
 
     private Map<String, Long> loadWorkStopHazardStats(LocalDateTime start, LocalDateTime end) {
-        return workStopReportRepository.countByHazardTypeAndPeriod(start, end).stream()
+        return safeList("work-stop hazard stats",
+                () -> workStopReportRepository.countByHazardTypeAndPeriod(start, end)).stream()
+                .filter(row -> row != null && row.length >= 2 && row[0] != null && row[1] instanceof Number)
                 .collect(Collectors.toMap(
-                        row -> String.valueOf(row[0]),
-                        row -> (Long) row[1]
+                        row -> nameOf(row[0]),
+                        row -> ((Number) row[1]).longValue(),
+                        Long::sum,
+                        LinkedHashMap::new
                 ));
+    }
+
+    private long safeCount(String label, Supplier<Long> supplier) {
+        try {
+            Long count = supplier.get();
+            return count == null ? 0L : count;
+        } catch (Exception e) {
+            log.warn("Admin dashboard count failed: {}", label, e);
+            return 0L;
+        }
+    }
+
+    private <T> List<T> safeList(String label, Supplier<List<T>> supplier) {
+        try {
+            List<T> values = supplier.get();
+            return values == null ? Collections.emptyList() : values;
+        } catch (Exception e) {
+            log.warn("Admin dashboard list failed: {}", label, e);
+            return Collections.emptyList();
+        }
+    }
+
+    private String joinDetail(String first, String second) {
+        return List.of(first, second).stream()
+                .filter(Objects::nonNull)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.joining(" / "));
+    }
+
+    private String nameOf(Object value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof Enum<?> enumValue) {
+            return enumValue.name();
+        }
+        return String.valueOf(value);
+    }
+
+    private String labelOf(Object value) {
+        if (value instanceof ReportStatus status) {
+            return status.getLabel();
+        }
+        if (value instanceof HazardType hazardType) {
+            return hazardType.getLabel();
+        }
+        return nameOf(value);
     }
 }
