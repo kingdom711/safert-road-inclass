@@ -40,6 +40,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.team WHERE u.role NOT IN :roles AND LOWER(u.username) <> 'admin' ORDER BY u.name ASC, u.id ASC")
     List<User> findParticipants(@Param("roles") List<Role> roles);
 
+    @Query(value = """
+            SELECT
+                u.id,
+                u.username,
+                u.name,
+                u.role,
+                u.is_verified,
+                u.created_at,
+                t.name AS team_name
+            FROM users u
+            LEFT JOIN teams t ON t.id = u.team_id
+            WHERE u.role NOT IN ('ROLE_ADMIN', 'ROLE_PROJECT_ADMIN')
+              AND LOWER(u.username) <> 'admin'
+            ORDER BY u.name ASC, u.id ASC
+            """, nativeQuery = true)
+    List<Object[]> findParticipantRows();
+
     /**
      * 이메일로 사용자 조회
      */

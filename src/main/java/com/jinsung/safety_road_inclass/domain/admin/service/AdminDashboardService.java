@@ -2,7 +2,6 @@ package com.jinsung.safety_road_inclass.domain.admin.service;
 
 import com.jinsung.safety_road_inclass.domain.admin.dto.AdminDashboardSummaryResponse;
 import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
-import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.checklist.entity.Checklist;
 import com.jinsung.safety_road_inclass.domain.checklist.entity.ChecklistStatus;
@@ -26,6 +25,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -105,8 +105,7 @@ public class AdminDashboardService {
     ) {
         Map<String, List<AdminDashboardSummaryResponse.MetricDetail>> details = new LinkedHashMap<>();
 
-        details.put("totalUsers", safeList("total user details",
-                () -> userRepository.findParticipants(NON_PARTICIPANT_ROLES)).stream()
+        details.put("totalUsers", safeList("total user details", userRepository::findParticipantRows).stream()
                 .map(this::toUserDetail)
                 .toList());
 
@@ -138,17 +137,16 @@ public class AdminDashboardService {
         return details;
     }
 
-    private AdminDashboardSummaryResponse.MetricDetail toUserDetail(User user) {
-        String role = user.getRole() == null ? "" : roleLabel(user.getRole());
-        String teamName = user.getTeam() == null ? "팀 미지정" : user.getTeam().getName();
+    private AdminDashboardSummaryResponse.MetricDetail toUserDetail(Object[] row) {
+        String teamName = stringAt(row, 6);
 
         return AdminDashboardSummaryResponse.MetricDetail.builder()
-                .id(String.valueOf(user.getId()))
-                .title(user.getName())
-                .detail(joinDetail(user.getUsername(), teamName))
-                .meta(role)
-                .status(user.isVerified() ? "본인인증 완료" : "본인인증 대기")
-                .occurredAt(user.getCreatedAt())
+                .id(stringAt(row, 0))
+                .title(emptyToFallback(stringAt(row, 2), stringAt(row, 1)))
+                .detail(joinDetail(stringAt(row, 1), emptyToFallback(teamName, "팀 미지정")))
+                .meta(roleLabel(stringAt(row, 3)))
+                .status(booleanAt(row, 4) ? "본인인증 완료" : "본인인증 대기")
+                .occurredAt(localDateTimeAt(row, 5))
                 .build();
     }
 
@@ -363,8 +361,58 @@ public class AdminDashboardService {
         };
     }
 
+    private String roleLabel(String role) {
+        if (role == null || role.isBlank()) {
+            return "";
+        }
+
+        return switch (role) {
+            case "ROLE_WORKER", "WORKER", "technician" -> "기술인";
+            case "ROLE_SUPERVISOR", "SUPERVISOR", "supervisor" -> "관리감독자";
+            case "ROLE_SAFETY_MANAGER", "SAFETY_MANAGER", "safetyManager", "safety_manager" -> "안전관리자";
+            case "ROLE_ADMIN", "ADMIN" -> "관리자";
+            case "ROLE_PROJECT_ADMIN", "PROJECT_ADMIN" -> "프로젝트 관리자";
+            default -> role;
+        };
+    }
+
     private String emptyToFallback(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private String stringAt(Object[] row, int index) {
+        if (row == null || row.length <= index || row[index] == null) {
+            return "";
+        }
+        return String.valueOf(row[index]);
+    }
+
+    private boolean booleanAt(Object[] row, int index) {
+        if (row == null || row.length <= index || row[index] == null) {
+            return false;
+        }
+        Object value = row[index];
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        if (value instanceof Number numberValue) {
+            return numberValue.intValue() != 0;
+        }
+        return Boolean.parseBoolean(String.valueOf(value));
+    }
+
+    private LocalDateTime localDateTimeAt(Object[] row, int index) {
+        if (row == null || row.length <= index || row[index] == null) {
+            return null;
+        }
+        Object value = row[index];
+        if (value instanceof LocalDateTime localDateTime) {
+            return localDateTime;
+        }
+        if (value instanceof Timestamp timestamp) {
+            return timestamp.toLocalDateTime();
+        }
+        return null;
     }
 
     private AdminDashboardSummaryResponse emptySummary(LocalDateTime generatedAt) {
