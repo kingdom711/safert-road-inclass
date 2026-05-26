@@ -2,22 +2,29 @@ package com.jinsung.safety_road_inclass.domain.admin.service;
 
 import com.jinsung.safety_road_inclass.domain.admin.dto.AdminDashboardSummaryResponse;
 import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
+import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
+import com.jinsung.safety_road_inclass.domain.checklist.entity.Checklist;
 import com.jinsung.safety_road_inclass.domain.checklist.entity.ChecklistStatus;
 import com.jinsung.safety_road_inclass.domain.checklist.repository.ChecklistRepository;
+import com.jinsung.safety_road_inclass.domain.education.entity.EducationCompletion;
 import com.jinsung.safety_road_inclass.domain.education.repository.EducationCompletionRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.entity.CycleStatus;
+import com.jinsung.safety_road_inclass.domain.hazardcycle.entity.HazardReport;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportRepository;
 import com.jinsung.safety_road_inclass.domain.reward.entity.RewardStatus;
+import com.jinsung.safety_road_inclass.domain.reward.entity.UserReward;
 import com.jinsung.safety_road_inclass.domain.reward.repository.UserRewardRepository;
 import com.jinsung.safety_road_inclass.domain.team.repository.TeamRepository;
 import com.jinsung.safety_road_inclass.domain.workstop.entity.HazardType;
 import com.jinsung.safety_road_inclass.domain.workstop.entity.ReportStatus;
+import com.jinsung.safety_road_inclass.domain.workstop.entity.WorkStopReport;
 import com.jinsung.safety_road_inclass.domain.workstop.repository.WorkStopReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -54,6 +61,7 @@ public class AdminDashboardService {
     private final WorkStopReportRepository workStopReportRepository;
     private final UserRewardRepository userRewardRepository;
 
+    @Transactional(readOnly = true)
     public AdminDashboardSummaryResponse getSummary() {
         LocalDateTime now = LocalDateTime.now();
         try {
@@ -80,6 +88,7 @@ public class AdminDashboardService {
             return AdminDashboardSummaryResponse.builder()
                     .generatedAt(now)
                     .metrics(metrics)
+                    .metricDetails(buildMetricDetails(todayStart, todayEnd))
                     .actionItems(buildActionItems())
                     .recentActivities(buildRecentActivities())
                     .workStopByHazardType(loadWorkStopHazardStats(todayStart.minusDays(30), todayEnd))
@@ -88,6 +97,118 @@ public class AdminDashboardService {
             log.error("Admin dashboard summary failed; returning empty summary", e);
             return emptySummary(now);
         }
+    }
+
+    private Map<String, List<AdminDashboardSummaryResponse.MetricDetail>> buildMetricDetails(
+            LocalDateTime todayStart,
+            LocalDateTime todayEnd
+    ) {
+        Map<String, List<AdminDashboardSummaryResponse.MetricDetail>> details = new LinkedHashMap<>();
+
+        details.put("totalUsers", safeList("total user details",
+                () -> userRepository.findParticipants(NON_PARTICIPANT_ROLES)).stream()
+                .map(this::toUserDetail)
+                .toList());
+
+        details.put("todayEducationCompletions", safeList("today education completion details",
+                () -> educationCompletionRepository.findByPeriod(todayStart, todayEnd)).stream()
+                .map(this::toEducationDetail)
+                .toList());
+
+        details.put("todayChecklistSubmissions", safeList("today checklist details",
+                () -> checklistRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(todayStart, todayEnd)).stream()
+                .map(this::toChecklistDetail)
+                .toList());
+
+        details.put("openHazardCycles", safeList("open hazard cycle details",
+                () -> hazardReportRepository.findByStatusInOrderByReportedAtDesc(OPEN_HAZARD_STATUSES)).stream()
+                .map(this::toHazardDetail)
+                .toList());
+
+        details.put("openWorkStopReports", safeList("open work-stop details",
+                () -> workStopReportRepository.findByStatusNotInOrderByCreatedAtDesc(CLOSED_WORK_STOP_STATUSES)).stream()
+                .map(this::toWorkStopDetail)
+                .toList());
+
+        details.put("pendingRewardRequests", safeList("pending reward details",
+                () -> userRewardRepository.findWithRewardByStatusOrderByCreatedAtAsc(RewardStatus.PENDING)).stream()
+                .map(this::toRewardDetail)
+                .toList());
+
+        return details;
+    }
+
+    private AdminDashboardSummaryResponse.MetricDetail toUserDetail(User user) {
+        String role = user.getRole() == null ? "" : roleLabel(user.getRole());
+        String teamName = user.getTeam() == null ? "팀 미지정" : user.getTeam().getName();
+
+        return AdminDashboardSummaryResponse.MetricDetail.builder()
+                .id(String.valueOf(user.getId()))
+                .title(user.getName())
+                .detail(joinDetail(user.getUsername(), teamName))
+                .meta(role)
+                .status(user.isVerified() ? "본인인증 완료" : "본인인증 대기")
+                .occurredAt(user.getCreatedAt())
+                .build();
+    }
+
+    private AdminDashboardSummaryResponse.MetricDetail toEducationDetail(EducationCompletion completion) {
+        return AdminDashboardSummaryResponse.MetricDetail.builder()
+                .id(String.valueOf(completion.getId()))
+                .title(completion.getUser().getName())
+                .detail(completion.getEducationTitle())
+                .meta(completion.getQuizScore() + "점")
+                .status(completion.isQuizPassed() ? "합격" : "미합격")
+                .occurredAt(completion.getCompletedAt())
+                .build();
+    }
+
+    private AdminDashboardSummaryResponse.MetricDetail toChecklistDetail(Checklist checklist) {
+        return AdminDashboardSummaryResponse.MetricDetail.builder()
+                .id(String.valueOf(checklist.getId()))
+                .title(checklist.getSiteName())
+                .detail(checklist.getCreatedBy().getName())
+                .meta(checklist.getWorkDate() == null ? "" : String.valueOf(checklist.getWorkDate()))
+                .status(nameOf(checklist.getStatus()))
+                .href("/risk-solution")
+                .occurredAt(checklist.getCreatedAt())
+                .build();
+    }
+
+    private AdminDashboardSummaryResponse.MetricDetail toHazardDetail(HazardReport report) {
+        return AdminDashboardSummaryResponse.MetricDetail.builder()
+                .id(String.valueOf(report.getId()))
+                .title(emptyToFallback(report.getLocationDescription(), "위험 위치 미입력"))
+                .detail(emptyToFallback(report.getHazardDescription(), "상세 설명 없음"))
+                .meta(report.getReporter().getName())
+                .status(nameOf(report.getStatus()))
+                .href("/hazard-cycle")
+                .occurredAt(report.getReportedAt())
+                .build();
+    }
+
+    private AdminDashboardSummaryResponse.MetricDetail toWorkStopDetail(WorkStopReport report) {
+        return AdminDashboardSummaryResponse.MetricDetail.builder()
+                .id(String.valueOf(report.getId()))
+                .title(emptyToFallback(report.getZone(), "작업 구역 미입력"))
+                .detail(labelOf(report.getHazardType()))
+                .meta(report.getIsAnonymous() ? "익명 신고" : report.getReporter().getName())
+                .status(labelOf(report.getStatus()))
+                .href("/work-stop-history")
+                .occurredAt(report.getCreatedAt())
+                .build();
+    }
+
+    private AdminDashboardSummaryResponse.MetricDetail toRewardDetail(UserReward reward) {
+        return AdminDashboardSummaryResponse.MetricDetail.builder()
+                .id(String.valueOf(reward.getId()))
+                .title(reward.getUser().getName())
+                .detail(reward.getReward().getName())
+                .meta(reward.getGoldPaid() + "골드")
+                .status(nameOf(reward.getStatus()))
+                .href("/admin/reward-approval")
+                .occurredAt(reward.getCreatedAt())
+                .build();
     }
 
     private List<AdminDashboardSummaryResponse.ActionItem> buildActionItems() {
@@ -232,6 +353,20 @@ public class AdminDashboardService {
         return nameOf(value);
     }
 
+    private String roleLabel(Role role) {
+        return switch (role) {
+            case ROLE_WORKER -> "기술인";
+            case ROLE_SUPERVISOR -> "관리감독자";
+            case ROLE_SAFETY_MANAGER -> "안전관리자";
+            case ROLE_ADMIN -> "관리자";
+            case ROLE_PROJECT_ADMIN -> "프로젝트 관리자";
+        };
+    }
+
+    private String emptyToFallback(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
     private AdminDashboardSummaryResponse emptySummary(LocalDateTime generatedAt) {
         return AdminDashboardSummaryResponse.builder()
                 .generatedAt(generatedAt)
@@ -245,6 +380,7 @@ public class AdminDashboardService {
                         .pendingRewardRequests(0)
                         .openHazardCycles(0)
                         .build())
+                .metricDetails(Collections.emptyMap())
                 .actionItems(Collections.emptyList())
                 .recentActivities(Collections.emptyList())
                 .workStopByHazardType(Collections.emptyMap())

@@ -13,6 +13,7 @@ public class AdminDashboardSummaryResponse {
 
     private final LocalDateTime generatedAt;
     private final Metrics metrics;
+    private final Map<String, List<MetricDetail>> metricDetails;
     private final List<ActionItem> actionItems;
     private final List<RecentActivity> recentActivities;
     private final Map<String, Long> workStopByHazardType;
@@ -28,6 +29,18 @@ public class AdminDashboardSummaryResponse {
         private final long openWorkStopReports;
         private final long pendingRewardRequests;
         private final long openHazardCycles;
+    }
+
+    @Getter
+    @Builder
+    public static class MetricDetail {
+        private final String id;
+        private final String title;
+        private final String detail;
+        private final String meta;
+        private final String status;
+        private final String href;
+        private final LocalDateTime occurredAt;
     }
 
     @Getter

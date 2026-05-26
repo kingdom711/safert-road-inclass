@@ -26,6 +26,9 @@ public interface WorkStopReportRepository extends JpaRepository<WorkStopReport, 
     /** 미해결 건수 */
     long countByStatusNotIn(List<ReportStatus> resolvedStatuses);
 
+    @Query("SELECT r FROM WorkStopReport r JOIN FETCH r.reporter WHERE r.status NOT IN :resolvedStatuses ORDER BY r.createdAt DESC")
+    List<WorkStopReport> findByStatusNotInOrderByCreatedAtDesc(@Param("resolvedStatuses") List<ReportStatus> resolvedStatuses);
+
     /** 기간별 위험 유형 통계 */
     @Query("SELECT r.hazardType, COUNT(r) FROM WorkStopReport r " +
            "WHERE r.createdAt BETWEEN :start AND :end GROUP BY r.hazardType")

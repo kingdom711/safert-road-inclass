@@ -33,6 +33,9 @@ public interface HazardReportRepository extends JpaRepository<HazardReport, Long
 
     Page<HazardReport> findAllByOrderByReportedAtDesc(Pageable pageable);
 
+    @Query("SELECT h FROM HazardReport h JOIN FETCH h.reporter WHERE h.status IN :statuses ORDER BY h.reportedAt DESC")
+    List<HazardReport> findByStatusInOrderByReportedAtDesc(@Param("statuses") List<CycleStatus> statuses);
+
     @Query("SELECT h.aiRiskLevel, COUNT(h) FROM HazardReport h " +
             "WHERE h.reporter.id = :reporterId AND h.aiRiskLevel IS NOT NULL GROUP BY h.aiRiskLevel")
     List<Object[]> countByRiskLevel(@Param("reporterId") Long reporterId);

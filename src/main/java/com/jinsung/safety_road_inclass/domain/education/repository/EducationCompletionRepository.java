@@ -48,7 +48,7 @@ public interface EducationCompletionRepository extends JpaRepository<EducationCo
     // ─── 컴플라이언스 리포트 / 증거자료 조회용 ──────────────────────
 
     /** 기간별 전체 이수 기록 조회 */
-    @Query("SELECT e FROM EducationCompletion e WHERE e.completedAt BETWEEN :start AND :end ORDER BY e.completedAt DESC")
+    @Query("SELECT e FROM EducationCompletion e JOIN FETCH e.user WHERE e.completedAt BETWEEN :start AND :end ORDER BY e.completedAt DESC")
     List<EducationCompletion> findByPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /** 기간별 이수 건수 */
