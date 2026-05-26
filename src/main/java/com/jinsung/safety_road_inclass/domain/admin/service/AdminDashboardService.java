@@ -67,9 +67,11 @@ public class AdminDashboardService {
         try {
             LocalDateTime todayStart = LocalDate.now().atStartOfDay();
             LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
+            Map<String, List<AdminDashboardSummaryResponse.MetricDetail>> metricDetails =
+                    buildMetricDetails(todayStart, todayEnd);
 
             var metrics = AdminDashboardSummaryResponse.Metrics.builder()
-                    .totalUsers(safeCount("total users", () -> userRepository.countParticipants(NON_PARTICIPANT_ROLES)))
+                    .totalUsers(metricDetails.getOrDefault("totalUsers", Collections.emptyList()).size())
                     .totalTeams(safeCount("total teams", teamRepository::count))
                     .todayEducationCompletions(safeCount("today education completions",
                             () -> educationCompletionRepository.countByCompletedAtBetween(todayStart, todayEnd)))
@@ -88,7 +90,7 @@ public class AdminDashboardService {
             return AdminDashboardSummaryResponse.builder()
                     .generatedAt(now)
                     .metrics(metrics)
-                    .metricDetails(buildMetricDetails(todayStart, todayEnd))
+                    .metricDetails(metricDetails)
                     .actionItems(buildActionItems())
                     .recentActivities(buildRecentActivities())
                     .workStopByHazardType(loadWorkStopHazardStats(todayStart.minusDays(30), todayEnd))
@@ -105,7 +107,7 @@ public class AdminDashboardService {
     ) {
         Map<String, List<AdminDashboardSummaryResponse.MetricDetail>> details = new LinkedHashMap<>();
 
-        details.put("totalUsers", safeList("total user details", userRepository::findParticipantRows).stream()
+        details.put("totalUsers", userRepository.findParticipantRows().stream()
                 .map(this::toUserDetail)
                 .toList());
 
