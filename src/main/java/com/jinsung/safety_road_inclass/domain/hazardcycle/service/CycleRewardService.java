@@ -28,6 +28,8 @@ public class CycleRewardService {
     // 보너스 포인트 (구 골드 보상을 1:1 포인트로 통일)
     private static final int TIER1_BONUS_POINTS = 10;
     private static final int TIER2_BONUS_POINTS = 10;
+    private static final int TIER1_TOTAL_POINTS = TIER1_POINTS + TIER1_BONUS_POINTS;
+    private static final int TIER2_TOTAL_POINTS = TIER2_POINTS + TIER2_BONUS_POINTS;
 
     @Transactional
     public RewardGrant awardTier1(HazardReport report) {
@@ -36,24 +38,24 @@ public class CycleRewardService {
             return new RewardGrant(report.getTier1PointsAwarded(), points.getBalance(), "이미 1단계 보상이 지급되었습니다.");
         }
 
-        AddPointsResponse points = pointService.addPoints(
+        pointService.addPoints(
                 report.getReporter().getId(),
                 TIER1_POINTS,
                 "Hazard Cycle 1단계 보상",
                 "위험 발견 및 AI 분석 완료 보상");
 
-        pointService.addPoints(
+        AddPointsResponse bonusPoints = pointService.addPoints(
                 report.getReporter().getId(),
                 TIER1_BONUS_POINTS,
                 "Hazard Cycle 1단계 보너스",
                 "위험 발견 활동 보너스 포인트");
 
-        report.awardTier1(TIER1_POINTS, LocalDateTime.now());
+        report.awardTier1(TIER1_TOTAL_POINTS, LocalDateTime.now());
 
         log.info("Hazard Cycle 1단계 보상 지급: reportId={}, userId={}, points={}",
                 report.getId(), report.getReporter().getId(), TIER1_POINTS);
 
-        return new RewardGrant(TIER1_POINTS, points.getBalanceAfter(), "1단계 보상 지급 완료 (+100P)");
+        return new RewardGrant(TIER1_TOTAL_POINTS, bonusPoints.getBalanceAfter(), "1단계 보상 지급 완료 (+110P)");
     }
 
     @Transactional
@@ -63,24 +65,24 @@ public class CycleRewardService {
             return new RewardGrant(report.getTier2PointsAwarded(), points.getBalance(), "이미 2단계 보상이 지급되었습니다.");
         }
 
-        AddPointsResponse points = pointService.addPoints(
+        pointService.addPoints(
                 report.getReporter().getId(),
                 TIER2_POINTS,
                 "Hazard Cycle 2단계 보상",
                 "조치 완료 검증 보상");
 
-        pointService.addPoints(
+        AddPointsResponse bonusPoints = pointService.addPoints(
                 report.getReporter().getId(),
                 TIER2_BONUS_POINTS,
                 "Hazard Cycle 2단계 보너스",
                 "조치 완료 활동 보너스 포인트");
 
-        report.awardTier2(TIER2_POINTS, LocalDateTime.now());
+        report.awardTier2(TIER2_TOTAL_POINTS, LocalDateTime.now());
 
         log.info("Hazard Cycle 2단계 보상 지급: reportId={}, userId={}, points={}",
                 report.getId(), report.getReporter().getId(), TIER2_POINTS);
 
-        return new RewardGrant(TIER2_POINTS, points.getBalanceAfter(), "2단계 보상 지급 완료 (+100P)");
+        return new RewardGrant(TIER2_TOTAL_POINTS, bonusPoints.getBalanceAfter(), "2단계 보상 지급 완료 (+110P)");
     }
 
     @Getter

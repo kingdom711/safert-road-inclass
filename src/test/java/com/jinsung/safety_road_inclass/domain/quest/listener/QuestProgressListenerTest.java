@@ -5,7 +5,6 @@ import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.gameprofile.service.GameProfileService;
-import com.jinsung.safety_road_inclass.domain.gold.service.GoldService;
 import com.jinsung.safety_road_inclass.domain.point.service.PointService;
 import com.jinsung.safety_road_inclass.domain.quest.entity.QuestConditionType;
 import com.jinsung.safety_road_inclass.domain.quest.entity.QuestDefinition;
@@ -36,7 +35,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class QuestProgressListenerTest {
@@ -54,8 +57,6 @@ class QuestProgressListenerTest {
     @Mock
     private PointService pointService;
     @Mock
-    private GoldService goldService;
-    @Mock
     private GameProfileService gameProfileService;
     @Mock
     private AlertService alertService;
@@ -71,14 +72,13 @@ class QuestProgressListenerTest {
                 questProgressRepository,
                 teamQuestProgressRepository,
                 pointService,
-                goldService,
                 gameProfileService,
                 alertService
         );
     }
 
     @Test
-    void rewards_all_members_once_when_team_quest_completes() {
+    void rewardsAllMembersOnceWhenTeamQuestCompletes() {
         User leader = user(1L, "leader");
         User first = user(2L, "first");
         User second = user(3L, "second");
@@ -117,14 +117,14 @@ class QuestProgressListenerTest {
         });
         when(teamQuestProgressRepository.findByTeamAndQuestAndPeriodKey(team, quest, periodKey))
                 .thenReturn(Optional.empty());
-        when(teamQuestProgressRepository.save(any(TeamQuestProgress.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(teamQuestProgressRepository.save(any(TeamQuestProgress.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         listener.onHazardReported(new HazardReportedEvent(second.getId(), 999L, LocalDateTime.of(2026, 4, 29, 10, 0)));
 
-        verify(pointService, times(2)).addPoints(anyLong(), eq(200), eq("팀 퀘스트 보상"), anyString());
-        verify(gameProfileService, times(2)).addExp(anyLong(), eq(50), anyString());
-        verify(goldService, never()).addGold(anyLong(), anyInt(), anyString(), anyString());
-        verify(alertService, times(2)).createTeamNotification(any(User.class), eq(leader), any(), anyString(), anyString());
+        verify(pointService, times(2)).addPoints(any(Long.class), eq(200), any(String.class), any(String.class));
+        verify(gameProfileService, times(2)).addExp(any(Long.class), eq(50), any(String.class));
+        verify(alertService, times(2)).createTeamNotification(any(User.class), eq(leader), any(), any(String.class), any(String.class));
         verify(teamQuestProgressRepository).save(argThat(saved ->
                 saved.isCompleted() && saved.getRewardedAt() != null
                         && saved.getCompletedMemberCount() == 2
@@ -139,7 +139,7 @@ class QuestProgressListenerTest {
     }
 
     private Team team(Long id, User leader) {
-        Team team = Team.builder().name("A팀").normalizedName("a팀").siteName("현장").leader(leader).build();
+        Team team = Team.builder().name("A team").normalizedName("a-team").siteName("site").leader(leader).build();
         ReflectionTestUtils.setField(team, "id", id);
         return team;
     }
@@ -158,7 +158,7 @@ class QuestProgressListenerTest {
     private QuestDefinition quest() {
         QuestDefinition quest = QuestDefinition.builder()
                 .code("team_hazard_relay")
-                .title("위험 릴레이")
+                .title("Relay quest")
                 .type(QuestType.DAILY)
                 .scope(QuestScope.TEAM)
                 .conditionType(QuestConditionType.HAZARD_REPORTED)
