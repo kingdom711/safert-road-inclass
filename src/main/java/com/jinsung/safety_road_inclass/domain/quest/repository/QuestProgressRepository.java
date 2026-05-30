@@ -27,4 +27,11 @@ public interface QuestProgressRepository extends JpaRepository<QuestProgress, Lo
     long countDistinctCompletersByUserIdsAndPeriod(@Param("userIds") Collection<Long> userIds,
                                                    @Param("start") LocalDateTime start,
                                                    @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(qp) FROM QuestProgress qp " +
+            "WHERE qp.user.id = :userId AND qp.completed = true " +
+            "AND qp.completedAt >= :start AND qp.completedAt < :end")
+    long countCompletedByUserIdAndCompletedAtBetween(@Param("userId") Long userId,
+                                                     @Param("start") LocalDateTime start,
+                                                     @Param("end") LocalDateTime end);
 }

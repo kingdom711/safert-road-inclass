@@ -21,4 +21,6 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
      */
     List<AttendanceRecord> findByUserIdAndCheckInDateBetweenOrderByCheckInDateAsc(
             Long userId, LocalDate startDate, LocalDate endDate);
+
+    long countByUserIdAndCheckInDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
 }

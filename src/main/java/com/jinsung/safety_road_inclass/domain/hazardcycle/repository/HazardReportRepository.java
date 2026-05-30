@@ -45,6 +45,16 @@ public interface HazardReportRepository extends JpaRepository<HazardReport, Long
             LocalDateTime start,
             LocalDateTime end);
 
+    long countByReporterIdAndReportedAtGreaterThanEqualAndReportedAtLessThan(
+            Long reporterId,
+            LocalDateTime start,
+            LocalDateTime end);
+
+    long countByReporterIdAndCompletedAtGreaterThanEqualAndCompletedAtLessThan(
+            Long reporterId,
+            LocalDateTime start,
+            LocalDateTime end);
+
     @Query("SELECT COALESCE(SUM(h.tier1PointsAwarded + h.tier2PointsAwarded), 0) FROM HazardReport h WHERE h.reporter.id = :reporterId")
     Integer sumPointsByReporterId(@Param("reporterId") Long reporterId);
 

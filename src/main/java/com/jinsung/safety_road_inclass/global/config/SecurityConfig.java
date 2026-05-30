@@ -83,6 +83,10 @@ public class SecurityConfig {
                                                 .hasAnyRole("SUPERVISOR", "SAFETY_MANAGER", "ADMIN")
                                                 .requestMatchers("/api/v1/admin/**")
                                                 .hasAnyRole("ADMIN", "PROJECT_ADMIN")
+                                                .requestMatchers(
+                                                                "/api/v1/users/me/reports",
+                                                                "/api/v1/users/me/reports/**")
+                                                .hasRole("PROJECT_ADMIN")
                                                 // Hazard Cycle 공개 검증 엔드포인트 (QR 스캔용, 인증 불필요)
                                                 .requestMatchers("/api/v1/hazard-verify/**").permitAll()
                                                 .requestMatchers("/api/v1/hazard-cycles/**").authenticated()
