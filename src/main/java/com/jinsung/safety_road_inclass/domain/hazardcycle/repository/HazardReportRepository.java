@@ -87,4 +87,9 @@ public interface HazardReportRepository extends JpaRepository<HazardReport, Long
             "WHERE h.integrityHash IS NOT NULL " +
             "ORDER BY h.id DESC")
     List<HazardReport> findMostRecentSealed(org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT h.reporter.id, COUNT(h), MAX(h.reportedAt) FROM HazardReport h " +
+            "WHERE h.reportedAt >= :start AND h.reportedAt < :end GROUP BY h.reporter.id")
+    List<Object[]> aggregateByReporterAndReportedAtBetween(@Param("start") LocalDateTime start,
+                                                           @Param("end") LocalDateTime end);
 }

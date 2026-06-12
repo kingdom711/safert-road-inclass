@@ -85,4 +85,11 @@ public interface EducationCompletionRepository extends JpaRepository<EducationCo
     double averageQuizScoreByUserIdAndCompletedAtBetween(@Param("userId") Long userId,
                                                          @Param("start") LocalDateTime start,
                                                          @Param("end") LocalDateTime end);
+
+    @Query("SELECT e.user.id, COUNT(e), COALESCE(AVG(e.quizScore), 0), MAX(e.completedAt) " +
+            "FROM EducationCompletion e " +
+            "WHERE e.completedAt >= :start AND e.completedAt < :end " +
+            "GROUP BY e.user.id")
+    List<Object[]> aggregateByUserAndCompletedAtBetween(@Param("start") LocalDateTime start,
+                                                        @Param("end") LocalDateTime end);
 }

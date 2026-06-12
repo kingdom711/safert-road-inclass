@@ -2,6 +2,8 @@ package com.jinsung.safety_road_inclass.domain.attendance.repository;
 
 import com.jinsung.safety_road_inclass.domain.attendance.entity.AttendanceRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,4 +25,9 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
             Long userId, LocalDate startDate, LocalDate endDate);
 
     long countByUserIdAndCheckInDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
+
+    @Query("SELECT a.user.id, COUNT(a), MAX(a.checkInDate) FROM AttendanceRecord a " +
+            "WHERE a.checkInDate BETWEEN :startDate AND :endDate GROUP BY a.user.id")
+    List<Object[]> aggregateByUserAndCheckInDateBetween(@Param("startDate") LocalDate startDate,
+                                                        @Param("endDate") LocalDate endDate);
 }

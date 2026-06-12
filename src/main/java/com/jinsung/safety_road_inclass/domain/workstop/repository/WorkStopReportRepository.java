@@ -41,4 +41,9 @@ public interface WorkStopReportRepository extends JpaRepository<WorkStopReport, 
 
     /** 기간별 해결 건수 */
     long countByCreatedAtBetweenAndStatusIn(LocalDateTime start, LocalDateTime end, List<ReportStatus> statuses);
+
+    @Query("SELECT r.reporter.id, COUNT(r), MAX(r.createdAt) FROM WorkStopReport r " +
+            "WHERE r.createdAt >= :start AND r.createdAt < :end GROUP BY r.reporter.id")
+    List<Object[]> aggregateByReporterAndCreatedAtBetween(@Param("start") LocalDateTime start,
+                                                          @Param("end") LocalDateTime end);
 }

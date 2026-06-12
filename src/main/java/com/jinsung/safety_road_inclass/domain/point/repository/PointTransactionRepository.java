@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * PointTransactionRepository - 포인트 거래 내역 데이터 접근
@@ -27,4 +28,10 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
                                                     @Param("type") TransactionType type,
                                                     @Param("start") LocalDateTime start,
                                                     @Param("end") LocalDateTime end);
+
+    @Query("SELECT p.user.id, COALESCE(SUM(p.amount), 0), MAX(p.createdAt) FROM PointTransaction p " +
+            "WHERE p.type = :type AND p.createdAt >= :start AND p.createdAt < :end GROUP BY p.user.id")
+    List<Object[]> aggregateAmountByUserAndTypeAndCreatedAtBetween(@Param("type") TransactionType type,
+                                                                   @Param("start") LocalDateTime start,
+                                                                   @Param("end") LocalDateTime end);
 }

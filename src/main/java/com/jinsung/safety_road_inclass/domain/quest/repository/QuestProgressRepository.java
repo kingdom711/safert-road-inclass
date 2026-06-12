@@ -34,4 +34,15 @@ public interface QuestProgressRepository extends JpaRepository<QuestProgress, Lo
     long countCompletedByUserIdAndCompletedAtBetween(@Param("userId") Long userId,
                                                      @Param("start") LocalDateTime start,
                                                      @Param("end") LocalDateTime end);
+
+    @Query("SELECT qp.user.id, " +
+            "SUM(CASE WHEN qp.completed = true AND qp.completedAt >= :start AND qp.completedAt < :end THEN 1 ELSE 0 END), " +
+            "COUNT(qp), " +
+            "MAX(CASE WHEN qp.completed = true THEN qp.completedAt ELSE qp.updatedAt END) " +
+            "FROM QuestProgress qp " +
+            "WHERE (qp.completed = true AND qp.completedAt >= :start AND qp.completedAt < :end) " +
+            "OR (qp.updatedAt >= :start AND qp.updatedAt < :end) " +
+            "GROUP BY qp.user.id")
+    List<Object[]> aggregateByUserAndActivityBetween(@Param("start") LocalDateTime start,
+                                                     @Param("end") LocalDateTime end);
 }
