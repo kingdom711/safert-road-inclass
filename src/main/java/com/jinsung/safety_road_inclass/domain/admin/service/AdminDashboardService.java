@@ -107,7 +107,7 @@ public class AdminDashboardService {
     ) {
         Map<String, List<AdminDashboardSummaryResponse.MetricDetail>> details = new LinkedHashMap<>();
 
-        details.put("totalUsers", userRepository.findParticipantRows().stream()
+        details.put("totalUsers", safeList("total user details", userRepository::findParticipantRows).stream()
                 .map(this::toUserDetail)
                 .toList());
 
