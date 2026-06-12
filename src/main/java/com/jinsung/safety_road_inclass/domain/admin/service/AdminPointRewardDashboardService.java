@@ -2,7 +2,6 @@ package com.jinsung.safety_road_inclass.domain.admin.service;
 
 import com.jinsung.safety_road_inclass.domain.admin.dto.PointRewardDashboardResponse;
 import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
-import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.gold.entity.GoldTransactionType;
 import com.jinsung.safety_road_inclass.domain.gold.entity.UserGold;
@@ -27,11 +26,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
 public class AdminPointRewardDashboardService {
 
+    @SuppressWarnings("unused")
     private static final List<Role> NON_PARTICIPANT_ROLES =
             List.of(Role.ROLE_ADMIN, Role.ROLE_PROJECT_ADMIN);
 
@@ -62,27 +63,28 @@ public class AdminPointRewardDashboardService {
         LocalDateTime endExclusive = effectiveTo.plusDays(1).atStartOfDay();
 
         Map<Long, UserPoints> pointBalances = pointBalances();
-        Map<Long, AmountStats> pointEarned = amountStats(
-                pointTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(TransactionType.EARN, start, endExclusive));
-        Map<Long, AmountStats> pointSpent = amountStats(
-                pointTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(TransactionType.SPEND, start, endExclusive));
+        Map<Long, AmountStats> pointEarned = amountStats(safeList("point earned stats",
+                () -> pointTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(TransactionType.EARN, start, endExclusive)));
+        Map<Long, AmountStats> pointSpent = amountStats(safeList("point spent stats",
+                () -> pointTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(TransactionType.SPEND, start, endExclusive)));
         Map<Long, UserGold> goldBalances = goldBalances();
-        Map<Long, AmountStats> goldEarned = amountStats(
-                goldTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(GoldTransactionType.EARN, start, endExclusive));
-        Map<Long, AmountStats> goldSpent = amountStats(
-                goldTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(GoldTransactionType.SPEND, start, endExclusive));
-        Map<Long, RewardStats> pendingRewards = rewardStats(userRewardRepository.aggregateByUserAndStatus(RewardStatus.PENDING));
+        Map<Long, AmountStats> goldEarned = amountStats(safeList("gold earned stats",
+                () -> goldTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(GoldTransactionType.EARN, start, endExclusive)));
+        Map<Long, AmountStats> goldSpent = amountStats(safeList("gold spent stats",
+                () -> goldTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(GoldTransactionType.SPEND, start, endExclusive)));
+        Map<Long, RewardStats> pendingRewards = rewardStats(safeList("pending reward stats",
+                () -> userRewardRepository.aggregateByUserAndStatus(RewardStatus.PENDING)));
 
         String normalizedKeyword = normalize(keyword);
-        List<PointRewardDashboardResponse.UserBalanceRow> rows = userRepository.findParticipants(NON_PARTICIPANT_ROLES).stream()
-                .filter(user -> teamId == null || (user.getTeam() != null && Objects.equals(user.getTeam().getId(), teamId)))
+        List<PointRewardDashboardResponse.UserBalanceRow> rows = participants().stream()
+                .filter(user -> teamId == null || Objects.equals(user.teamId(), teamId))
                 .filter(user -> normalizedKeyword.isBlank() || matchesKeyword(user, normalizedKeyword))
                 .map(user -> buildUserRow(user, pointBalances, pointEarned, pointSpent, goldBalances, goldEarned, goldSpent, pendingRewards))
                 .sorted(comparator(sort))
                 .toList();
 
-        List<PointRewardDashboardResponse.RewardDemandRow> demandRows = userRewardRepository
-                .aggregateRewardDemandByStatus(RewardStatus.PENDING)
+        List<PointRewardDashboardResponse.RewardDemandRow> demandRows = safeList("reward demand stats",
+                () -> userRewardRepository.aggregateRewardDemandByStatus(RewardStatus.PENDING))
                 .stream()
                 .map(this::toRewardDemandRow)
                 .toList();
@@ -97,7 +99,7 @@ public class AdminPointRewardDashboardService {
     }
 
     private PointRewardDashboardResponse.UserBalanceRow buildUserRow(
-            User user,
+            ParticipantUser user,
             Map<Long, UserPoints> pointBalances,
             Map<Long, AmountStats> pointEarned,
             Map<Long, AmountStats> pointSpent,
@@ -106,7 +108,7 @@ public class AdminPointRewardDashboardService {
             Map<Long, AmountStats> goldSpent,
             Map<Long, RewardStats> pendingRewards
     ) {
-        Long userId = user.getId();
+        Long userId = user.id();
         UserPoints points = pointBalances.get(userId);
         UserGold gold = goldBalances.get(userId);
         AmountStats periodPointEarned = pointEarned.getOrDefault(userId, AmountStats.empty());
@@ -117,10 +119,10 @@ public class AdminPointRewardDashboardService {
 
         return PointRewardDashboardResponse.UserBalanceRow.builder()
                 .userId(userId)
-                .username(user.getUsername())
-                .name(user.getName())
-                .teamId(user.getTeam() == null ? null : user.getTeam().getId())
-                .teamName(user.getTeam() == null ? "미배정" : user.getTeam().getName())
+                .username(user.username())
+                .name(user.name())
+                .teamId(user.teamId())
+                .teamName(emptyToFallback(user.teamName(), "팀 미지정"))
                 .pointBalance(points == null ? 0 : points.getBalance())
                 .totalPointsEarned(points == null ? 0 : points.getTotalEarned())
                 .totalPointsSpent(points == null ? 0 : points.getTotalSpent())
@@ -168,9 +170,22 @@ public class AdminPointRewardDashboardService {
                 .build();
     }
 
+    private List<ParticipantUser> participants() {
+        return safeList("participant rows", userRepository::findParticipantAdminRows).stream()
+                .map(row -> new ParticipantUser(
+                        longAt(row, 0),
+                        stringAt(row, 1),
+                        stringAt(row, 2),
+                        stringAt(row, 3),
+                        nullableLongAt(row, 5),
+                        stringAt(row, 6)
+                ))
+                .toList();
+    }
+
     private Map<Long, UserPoints> pointBalances() {
         Map<Long, UserPoints> result = new HashMap<>();
-        for (UserPoints points : userPointsRepository.findAllOrderByBalanceDesc()) {
+        for (UserPoints points : safeList("point balances", userPointsRepository::findAllOrderByBalanceDesc)) {
             result.put(points.getUser().getId(), points);
         }
         return result;
@@ -178,7 +193,7 @@ public class AdminPointRewardDashboardService {
 
     private Map<Long, UserGold> goldBalances() {
         Map<Long, UserGold> result = new HashMap<>();
-        for (UserGold gold : userGoldRepository.findAllWithUser()) {
+        for (UserGold gold : safeList("gold balances", userGoldRepository::findAllWithUser)) {
             result.put(gold.getUser().getId(), gold);
         }
         return result;
@@ -213,11 +228,11 @@ public class AdminPointRewardDashboardService {
         return "name".equalsIgnoreCase(sort) ? comparator : comparator.reversed().thenComparing(PointRewardDashboardResponse.UserBalanceRow::getName);
     }
 
-    private boolean matchesKeyword(User user, String normalizedKeyword) {
-        return normalize(user.getName()).contains(normalizedKeyword)
-                || normalize(user.getUsername()).contains(normalizedKeyword)
-                || normalize(user.getEmail()).contains(normalizedKeyword)
-                || (user.getTeam() != null && normalize(user.getTeam().getName()).contains(normalizedKeyword));
+    private boolean matchesKeyword(ParticipantUser user, String normalizedKeyword) {
+        return normalize(user.name()).contains(normalizedKeyword)
+                || normalize(user.username()).contains(normalizedKeyword)
+                || normalize(user.email()).contains(normalizedKeyword)
+                || normalize(user.teamName()).contains(normalizedKeyword);
     }
 
     private String normalize(String value) {
@@ -234,14 +249,42 @@ public class AdminPointRewardDashboardService {
         return latest;
     }
 
+    private <T> List<T> safeList(String label, Supplier<List<T>> supplier) {
+        try {
+            List<T> values = supplier.get();
+            return values == null ? List.of() : values;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
     private long longAt(Object[] row, int index) {
         Object value = row[index];
         return value instanceof Number number ? number.longValue() : 0;
     }
 
+    private Long nullableLongAt(Object[] row, int index) {
+        Object value = row[index];
+        return value instanceof Number number ? number.longValue() : null;
+    }
+
     private String stringAt(Object[] row, int index) {
         Object value = row[index];
         return value == null ? "" : String.valueOf(value);
+    }
+
+    private String emptyToFallback(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private record ParticipantUser(
+            Long id,
+            String username,
+            String name,
+            String email,
+            Long teamId,
+            String teamName
+    ) {
     }
 
     private record AmountStats(long amount, LocalDateTime lastActivityAt) {

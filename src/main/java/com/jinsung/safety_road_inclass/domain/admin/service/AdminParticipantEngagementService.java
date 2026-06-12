@@ -3,7 +3,6 @@ package com.jinsung.safety_road_inclass.domain.admin.service;
 import com.jinsung.safety_road_inclass.domain.admin.dto.ParticipantEngagementResponse;
 import com.jinsung.safety_road_inclass.domain.attendance.repository.AttendanceRecordRepository;
 import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
-import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.education.repository.EducationCompletionRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportAckRepository;
@@ -28,11 +27,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
 public class AdminParticipantEngagementService {
 
+    @SuppressWarnings("unused")
     private static final List<Role> NON_PARTICIPANT_ROLES =
             List.of(Role.ROLE_ADMIN, Role.ROLE_PROJECT_ADMIN);
 
@@ -67,14 +68,17 @@ public class AdminParticipantEngagementService {
         Map<Long, AttendanceStats> attendance = attendanceStats(effectiveFrom, effectiveTo);
         Map<Long, EducationStats> education = educationStats(start, endExclusive);
         Map<Long, QuestStats> quests = questStats(start, endExclusive);
-        Map<Long, CountStats> hazards = countStats(hazardReportRepository.aggregateByReporterAndReportedAtBetween(start, endExclusive));
-        Map<Long, CountStats> hazardAcks = countStats(hazardReportAckRepository.aggregateByAckerAndAckedAtBetween(start, endExclusive));
-        Map<Long, CountStats> workStops = countStats(workStopReportRepository.aggregateByReporterAndCreatedAtBetween(start, endExclusive));
+        Map<Long, CountStats> hazards = countStats(safeList("hazard report stats",
+                () -> hazardReportRepository.aggregateByReporterAndReportedAtBetween(start, endExclusive)));
+        Map<Long, CountStats> hazardAcks = countStats(safeList("hazard ack stats",
+                () -> hazardReportAckRepository.aggregateByAckerAndAckedAtBetween(start, endExclusive)));
+        Map<Long, CountStats> workStops = countStats(safeList("work-stop stats",
+                () -> workStopReportRepository.aggregateByReporterAndCreatedAtBetween(start, endExclusive)));
         Map<Long, PointStats> points = pointStats(start, endExclusive);
 
         String normalizedKeyword = normalize(keyword);
-        List<ParticipantEngagementResponse.Row> rows = userRepository.findParticipants(NON_PARTICIPANT_ROLES).stream()
-                .filter(user -> teamId == null || (user.getTeam() != null && Objects.equals(user.getTeam().getId(), teamId)))
+        List<ParticipantEngagementResponse.Row> rows = participants().stream()
+                .filter(user -> teamId == null || Objects.equals(user.teamId(), teamId))
                 .filter(user -> normalizedKeyword.isBlank() || matchesKeyword(user, normalizedKeyword))
                 .map(user -> buildRow(user, attendance, education, quests, hazards, hazardAcks, workStops, points))
                 .sorted(comparator(sort))
@@ -108,7 +112,7 @@ public class AdminParticipantEngagementService {
     }
 
     private ParticipantEngagementResponse.Row buildRow(
-            User user,
+            ParticipantUser user,
             Map<Long, AttendanceStats> attendance,
             Map<Long, EducationStats> education,
             Map<Long, QuestStats> quests,
@@ -117,7 +121,7 @@ public class AdminParticipantEngagementService {
             Map<Long, CountStats> workStops,
             Map<Long, PointStats> points
     ) {
-        Long userId = user.getId();
+        Long userId = user.id();
         AttendanceStats attendanceStats = attendance.getOrDefault(userId, AttendanceStats.empty());
         EducationStats educationStats = education.getOrDefault(userId, EducationStats.empty());
         QuestStats questStats = quests.getOrDefault(userId, QuestStats.empty());
@@ -138,11 +142,11 @@ public class AdminParticipantEngagementService {
 
         return ParticipantEngagementResponse.Row.builder()
                 .userId(userId)
-                .username(user.getUsername())
-                .name(user.getName())
-                .role(roleLabel(user.getRole()))
-                .teamId(user.getTeam() == null ? null : user.getTeam().getId())
-                .teamName(user.getTeam() == null ? "미배정" : user.getTeam().getName())
+                .username(user.username())
+                .name(user.name())
+                .role(roleLabel(user.role()))
+                .teamId(user.teamId())
+                .teamName(emptyToFallback(user.teamName(), "팀 미지정"))
                 .attendanceCount(attendanceStats.count())
                 .educationCompletions(educationStats.count())
                 .averageQuizScore(educationStats.averageQuizScore())
@@ -158,9 +162,24 @@ public class AdminParticipantEngagementService {
                 .build();
     }
 
+    private List<ParticipantUser> participants() {
+        return safeList("participant rows", userRepository::findParticipantAdminRows).stream()
+                .map(row -> new ParticipantUser(
+                        longAt(row, 0),
+                        stringAt(row, 1),
+                        stringAt(row, 2),
+                        stringAt(row, 3),
+                        nullableLongAt(row, 5),
+                        stringAt(row, 6),
+                        stringAt(row, 4)
+                ))
+                .toList();
+    }
+
     private Map<Long, AttendanceStats> attendanceStats(LocalDate from, LocalDate to) {
         Map<Long, AttendanceStats> result = new HashMap<>();
-        for (Object[] row : attendanceRecordRepository.aggregateByUserAndCheckInDateBetween(from, to)) {
+        for (Object[] row : safeList("attendance stats",
+                () -> attendanceRecordRepository.aggregateByUserAndCheckInDateBetween(from, to))) {
             result.put(longAt(row, 0), new AttendanceStats(longAt(row, 1), (LocalDate) row[2]));
         }
         return result;
@@ -168,7 +187,8 @@ public class AdminParticipantEngagementService {
 
     private Map<Long, EducationStats> educationStats(LocalDateTime start, LocalDateTime end) {
         Map<Long, EducationStats> result = new HashMap<>();
-        for (Object[] row : educationCompletionRepository.aggregateByUserAndCompletedAtBetween(start, end)) {
+        for (Object[] row : safeList("education stats",
+                () -> educationCompletionRepository.aggregateByUserAndCompletedAtBetween(start, end))) {
             result.put(longAt(row, 0), new EducationStats(longAt(row, 1), doubleAt(row, 2), (LocalDateTime) row[3]));
         }
         return result;
@@ -176,7 +196,8 @@ public class AdminParticipantEngagementService {
 
     private Map<Long, QuestStats> questStats(LocalDateTime start, LocalDateTime end) {
         Map<Long, QuestStats> result = new HashMap<>();
-        for (Object[] row : questProgressRepository.aggregateByUserAndActivityBetween(start, end)) {
+        for (Object[] row : safeList("quest stats",
+                () -> questProgressRepository.aggregateByUserAndActivityBetween(start, end))) {
             result.put(longAt(row, 0), new QuestStats(longAt(row, 1), longAt(row, 2), (LocalDateTime) row[3]));
         }
         return result;
@@ -192,7 +213,8 @@ public class AdminParticipantEngagementService {
 
     private Map<Long, PointStats> pointStats(LocalDateTime start, LocalDateTime end) {
         Map<Long, PointStats> result = new HashMap<>();
-        for (Object[] row : pointTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(TransactionType.EARN, start, end)) {
+        for (Object[] row : safeList("point stats",
+                () -> pointTransactionRepository.aggregateAmountByUserAndTypeAndCreatedAtBetween(TransactionType.EARN, start, end))) {
             result.put(longAt(row, 0), new PointStats(longAt(row, 1), (LocalDateTime) row[2]));
         }
         return result;
@@ -211,27 +233,28 @@ public class AdminParticipantEngagementService {
         return "name".equalsIgnoreCase(sort) ? comparator : comparator.reversed().thenComparing(ParticipantEngagementResponse.Row::getName);
     }
 
-    private boolean matchesKeyword(User user, String normalizedKeyword) {
-        return normalize(user.getName()).contains(normalizedKeyword)
-                || normalize(user.getUsername()).contains(normalizedKeyword)
-                || normalize(user.getEmail()).contains(normalizedKeyword)
-                || (user.getTeam() != null && normalize(user.getTeam().getName()).contains(normalizedKeyword));
+    private boolean matchesKeyword(ParticipantUser user, String normalizedKeyword) {
+        return normalize(user.name()).contains(normalizedKeyword)
+                || normalize(user.username()).contains(normalizedKeyword)
+                || normalize(user.email()).contains(normalizedKeyword)
+                || normalize(user.teamName()).contains(normalizedKeyword);
     }
 
     private String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
-    private String roleLabel(Role role) {
+    private String roleLabel(String role) {
         if (role == null) {
             return "";
         }
         return switch (role) {
-            case ROLE_WORKER -> "근로자";
-            case ROLE_SUPERVISOR -> "관리감독자";
-            case ROLE_SAFETY_MANAGER -> "안전관리자";
-            case ROLE_ADMIN -> "관리자";
-            case ROLE_PROJECT_ADMIN -> "프로젝트 관리자";
+            case "ROLE_WORKER" -> "근로자";
+            case "ROLE_SUPERVISOR" -> "관리감독자";
+            case "ROLE_SAFETY_MANAGER" -> "안전관리자";
+            case "ROLE_ADMIN" -> "관리자";
+            case "ROLE_PROJECT_ADMIN" -> "프로젝트 관리자";
+            default -> role;
         };
     }
 
@@ -250,9 +273,23 @@ public class AdminParticipantEngagementService {
         return latest;
     }
 
+    private <T> List<T> safeList(String label, Supplier<List<T>> supplier) {
+        try {
+            List<T> values = supplier.get();
+            return values == null ? List.of() : values;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
     private long longAt(Object[] row, int index) {
         Object value = row[index];
         return value instanceof Number number ? number.longValue() : 0;
+    }
+
+    private Long nullableLongAt(Object[] row, int index) {
+        Object value = row[index];
+        return value instanceof Number number ? number.longValue() : null;
     }
 
     private double doubleAt(Object[] row, int index) {
@@ -260,8 +297,28 @@ public class AdminParticipantEngagementService {
         return value instanceof Number number ? roundOneDecimal(number.doubleValue()) : 0;
     }
 
+    private String stringAt(Object[] row, int index) {
+        Object value = row[index];
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private String emptyToFallback(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
     private double roundOneDecimal(double value) {
         return BigDecimal.valueOf(value).setScale(1, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private record ParticipantUser(
+            Long id,
+            String username,
+            String name,
+            String email,
+            Long teamId,
+            String teamName,
+            String role
+    ) {
     }
 
     private record AttendanceStats(long count, LocalDate lastCheckInDate) {

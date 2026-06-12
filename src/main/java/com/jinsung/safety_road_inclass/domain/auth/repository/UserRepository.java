@@ -57,6 +57,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
             """, nativeQuery = true)
     List<Object[]> findParticipantRows();
 
+    @Query(value = """
+            SELECT
+                u.id,
+                u.username,
+                u.name,
+                u.email,
+                u.role,
+                u.team_id,
+                t.name AS team_name
+            FROM users u
+            LEFT JOIN teams t ON t.id = u.team_id
+            WHERE u.role NOT IN ('ROLE_ADMIN', 'ROLE_PROJECT_ADMIN')
+              AND LOWER(u.username) <> 'admin'
+            ORDER BY u.name ASC, u.id ASC
+            """, nativeQuery = true)
+    List<Object[]> findParticipantAdminRows();
+
     /**
      * 이메일로 사용자 조회
      */

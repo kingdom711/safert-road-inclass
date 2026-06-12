@@ -1,8 +1,6 @@
 package com.jinsung.safety_road_inclass.domain.admin.service;
 
 import com.jinsung.safety_road_inclass.domain.attendance.repository.AttendanceRecordRepository;
-import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
-import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.education.repository.EducationCompletionRepository;
 import com.jinsung.safety_road_inclass.domain.hazardcycle.repository.HazardReportAckRepository;
@@ -17,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -74,17 +71,9 @@ class AdminParticipantEngagementServiceTest {
     @Test
     @DisplayName("getParticipantEngagement: combines per-user activity aggregates")
     void getParticipantEngagement_combinesAggregates() {
-        User worker = User.builder()
-                .username("worker1")
-                .password("pw")
-                .role(Role.ROLE_WORKER)
-                .name("김현장")
-                .email("worker1@example.com")
-                .isVerified(true)
-                .build();
-        ReflectionTestUtils.setField(worker, "id", 7L);
-
-        when(userRepository.findParticipants(any())).thenReturn(List.of(worker));
+        when(userRepository.findParticipantAdminRows()).thenReturn(List.<Object[]>of(
+                new Object[]{7L, "worker1", "김현장", "worker1@example.com", "ROLE_WORKER", null, null}
+        ));
         when(attendanceRecordRepository.aggregateByUserAndCheckInDateBetween(any(), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{7L, 2L, LocalDate.of(2026, 6, 10)}));
         when(educationCompletionRepository.aggregateByUserAndCompletedAtBetween(any(), any()))
