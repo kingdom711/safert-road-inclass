@@ -28,7 +28,7 @@ public class QuestSeedConfig implements CommandLineRunner {
         seed("team_hazard_relay", "위험 릴레이", "팀원 모두가 위험요소를 1건 이상 보고합니다.",
                 QuestType.DAILY, QuestConditionType.HAZARD_REPORTED, 1, 200, 50, 0);
         seed("team_zero_accident", "무재해 주간", "이번 주 작업중지 신고 없이 주간을 마감합니다.",
-                QuestType.WEEKLY, QuestConditionType.ZERO_WORK_STOP, 1, 501000, 300, 0);
+                QuestType.WEEKLY, QuestConditionType.ZERO_WORK_STOP, 1, 1000, 300, 500);
         seed("team_education", "전원 안전교육", "팀원 모두가 주간 안전교육을 이수합니다.",
                 QuestType.WEEKLY, QuestConditionType.EDUCATION_COMPLETED, 1, 500, 200, 0);
     }

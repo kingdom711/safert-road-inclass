@@ -2,6 +2,7 @@ package com.jinsung.safety_road_inclass.domain.quest.listener;
 
 import com.jinsung.safety_road_inclass.domain.alert.entity.AlertType;
 import com.jinsung.safety_road_inclass.domain.alert.service.AlertService;
+import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.gameprofile.service.GameProfileService;
@@ -78,7 +79,8 @@ public class QuestProgressListener {
             return;
         }
 
-        List<TeamMember> activeMembers = teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE);
+        List<TeamMember> activeMembers = rewardableMembers(
+                teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE));
         if (activeMembers.isEmpty()) {
             return;
         }
@@ -145,6 +147,17 @@ public class QuestProgressListener {
                     quest.getTitle() + " 완료 보상이 지급되었습니다."
             );
         }
+    }
+
+    private List<TeamMember> rewardableMembers(List<TeamMember> members) {
+        return members.stream()
+                .filter(member -> {
+                    User user = member.getUser();
+                    return user != null
+                            && user.getRole() != Role.ROLE_ADMIN
+                            && user.getRole() != Role.ROLE_PROJECT_ADMIN;
+                })
+                .toList();
     }
 
     private String periodKey(QuestDefinition quest, LocalDateTime occurredAt) {

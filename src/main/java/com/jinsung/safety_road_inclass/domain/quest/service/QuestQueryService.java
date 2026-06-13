@@ -1,6 +1,7 @@
 package com.jinsung.safety_road_inclass.domain.quest.service;
 
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.domain.gameprofile.service.GameProfileService;
 import com.jinsung.safety_road_inclass.domain.point.service.PointService;
@@ -66,7 +67,8 @@ public class QuestQueryService {
             throw new CustomException(ErrorCode.TEAM_MEMBERSHIP_NOT_FOUND);
         }
 
-        List<TeamMember> activeMembers = teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE);
+        List<TeamMember> activeMembers = rewardableMembers(
+                teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE));
         QuestType typeFilter = parsePeriod(period);
         LocalDateTime now = LocalDateTime.now();
 
@@ -125,7 +127,8 @@ public class QuestQueryService {
                 .filter(candidate -> candidate.getScope() == QuestScope.TEAM && candidate.isActive())
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        List<TeamMember> activeMembers = teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE);
+        List<TeamMember> activeMembers = rewardableMembers(
+                teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE));
         LocalDateTime now = LocalDateTime.now();
         String periodKey = quest.getType() == QuestType.WEEKLY
                 ? PeriodKeyResolver.weeklyKey(now)
@@ -225,7 +228,8 @@ public class QuestQueryService {
     private void closeWeeklyZeroWorkStopQuest(LocalDateTime now, QuestDefinition quest) {
         String periodKey = PeriodKeyResolver.weeklyKey(now);
         for (Team team : teamRepository.findAll()) {
-            List<TeamMember> activeMembers = teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE);
+            List<TeamMember> activeMembers = rewardableMembers(
+                    teamMemberRepository.findAllByTeamAndStatus(team, MembershipStatus.ACTIVE));
             if (activeMembers.isEmpty()) {
                 continue;
             }
@@ -283,6 +287,17 @@ public class QuestQueryService {
 
     private int getExchangeBackedRewardPoints(QuestDefinition quest) {
         return quest.getRewardPoints() + (quest.getRewardGold() * POINTS_PER_GOLD);
+    }
+
+    private List<TeamMember> rewardableMembers(List<TeamMember> members) {
+        return members.stream()
+                .filter(member -> {
+                    User user = member.getUser();
+                    return user != null
+                            && user.getRole() != Role.ROLE_ADMIN
+                            && user.getRole() != Role.ROLE_PROJECT_ADMIN;
+                })
+                .toList();
     }
 
     private TeamQuestMemberProgressResponse toMemberResponse(User me, TeamMember member,
