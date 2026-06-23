@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByUsername(String username);
 
+    Optional<User> findByUsernameIgnoreCase(String username);
+
     /**
      * username 중복 체크
      */
@@ -78,4 +80,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * 이메일로 사용자 조회
      */
     Optional<User> findByEmail(String email);
+
+    Optional<User> findByEmailIgnoreCase(String email);
 }

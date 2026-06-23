@@ -2,6 +2,8 @@ package com.jinsung.safety_road_inclass.domain.auth.controller;
 
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginResponse;
+import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetConfirmRequest;
+import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.SignupRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.TokenRefreshRequest;
 import com.jinsung.safety_road_inclass.domain.auth.service.AuthService;
@@ -87,6 +89,24 @@ public class AuthController {
         
         LoginResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(summary = "비밀번호 재설정 코드 요청", description = "가입 이메일로 비밀번호 재설정 인증 코드를 발송합니다.")
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request) {
+
+        authService.requestPasswordReset(request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @Operation(summary = "비밀번호 재설정", description = "이메일 인증 코드로 새 비밀번호를 설정합니다.")
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request) {
+
+        authService.confirmPasswordReset(request);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @Operation(summary = "내 정보 조회", description = "현재 로그인된 사용자의 정보를 조회합니다.")

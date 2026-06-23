@@ -2,18 +2,30 @@ package com.jinsung.safety_road_inclass.domain.auth.service;
 
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginResponse;
+import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetConfirmRequest;
+import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.SignupRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.TokenRefreshRequest;
+import com.jinsung.safety_road_inclass.domain.auth.entity.PasswordResetCode;
 import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.auth.repository.PasswordResetCodeRepository;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.HexFormat;
 
 /**
  * AuthService - 인증 서비스
@@ -25,8 +37,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PasswordResetCodeRepository passwordResetCodeRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordResetMailService passwordResetMailService;
+
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    @Value("${app.password-reset.code-secret:${jwt.secret}}")
+    private String passwordResetCodeSecret;
 
     /**
      * 회원가입
@@ -107,6 +126,59 @@ public class AuthService {
         return LoginResponse.of(newAccessToken, newRefreshToken, user);
     }
 
+    @Transactional
+    public void requestPasswordReset(PasswordResetRequest request) {
+        String email = request.getEmail().trim();
+
+        userRepository.findByUsernameIgnoreCase(email)
+                .or(() -> userRepository.findByEmailIgnoreCase(email))
+                .ifPresent(user -> {
+                    LocalDateTime now = LocalDateTime.now();
+                    passwordResetCodeRepository.findAllByUserAndUsedAtIsNull(user)
+                            .forEach(code -> code.expire(now));
+
+                    String rawCode = generateCode();
+                    PasswordResetCode resetCode = PasswordResetCode.builder()
+                            .user(user)
+                            .codeHash(hashResetCode(user, rawCode))
+                            .expiresAt(now.plusMinutes(15))
+                            .build();
+                    passwordResetCodeRepository.save(resetCode);
+
+                    try {
+                        passwordResetMailService.sendResetCode(user.getEmail() != null ? user.getEmail() : user.getUsername(), rawCode);
+                    } catch (RuntimeException mailError) {
+                        log.error("비밀번호 재설정 메일 발송 실패: userId={}, email={}", user.getId(), email, mailError);
+                    }
+                });
+    }
+
+    @Transactional
+    public void confirmPasswordReset(PasswordResetConfirmRequest request) {
+        String email = request.getEmail().trim();
+        User user = userRepository.findByUsernameIgnoreCase(email)
+                .or(() -> userRepository.findByEmailIgnoreCase(email))
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INPUT, "인증 코드가 올바르지 않거나 만료되었습니다."));
+
+        PasswordResetCode resetCode = passwordResetCodeRepository.findFirstByUserOrderByCreatedAtDesc(user)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INPUT, "인증 코드가 올바르지 않거나 만료되었습니다."));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (!resetCode.isUsable(now)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT, "인증 코드가 올바르지 않거나 만료되었습니다.");
+        }
+
+        if (!resetCode.matches(hashResetCode(user, request.getCode()))) {
+            resetCode.recordFailedAttempt();
+            throw new CustomException(ErrorCode.INVALID_INPUT, "인증 코드가 올바르지 않거나 만료되었습니다.");
+        }
+
+        user.changePassword(passwordEncoder, request.getNewPassword());
+        resetCode.markUsed(now);
+
+        log.info("비밀번호 재설정 완료: userId={}, username={}", user.getId(), user.getUsername());
+    }
+
     /**
      * 현재 로그인된 사용자 조회
      */
@@ -130,6 +202,20 @@ public class AuthService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         return LoginResponse.UserInfo.from(user);
+    }
+
+    private String generateCode() {
+        return "%06d".formatted(secureRandom.nextInt(1_000_000));
+    }
+
+    private String hashResetCode(User user, String rawCode) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            String material = user.getId() + ":" + rawCode + ":" + passwordResetCodeSecret;
+            return HexFormat.of().formatHex(digest.digest(material.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
 }
 

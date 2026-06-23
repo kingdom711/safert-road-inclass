@@ -74,6 +74,10 @@ public class User extends BaseTimeEntity {
         return encoder.matches(rawPassword, this.password);
     }
 
+    public void changePassword(PasswordEncoder encoder, String rawPassword) {
+        this.password = encoder.encode(rawPassword);
+    }
+
     public void verify(String phoneNumber) {
         this.isVerified = true;
         this.phoneNumber = phoneNumber;
