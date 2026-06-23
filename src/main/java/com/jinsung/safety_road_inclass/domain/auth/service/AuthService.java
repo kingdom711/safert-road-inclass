@@ -2,14 +2,17 @@ package com.jinsung.safety_road_inclass.domain.auth.service;
 
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginResponse;
-import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetCodeResponse;
+import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetApprovalResponse;
 import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetConfirmRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.SignupRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.TokenRefreshRequest;
+import com.jinsung.safety_road_inclass.domain.auth.entity.PasswordResetApprovalRequest;
+import com.jinsung.safety_road_inclass.domain.auth.entity.PasswordResetApprovalStatus;
 import com.jinsung.safety_road_inclass.domain.auth.entity.PasswordResetCode;
 import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.auth.repository.PasswordResetApprovalRequestRepository;
 import com.jinsung.safety_road_inclass.domain.auth.repository.PasswordResetCodeRepository;
 import com.jinsung.safety_road_inclass.domain.auth.repository.UserRepository;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
@@ -27,6 +30,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.List;
 
 /**
  * AuthService - 인증 서비스
@@ -38,6 +42,7 @@ import java.util.HexFormat;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PasswordResetApprovalRequestRepository passwordResetApprovalRequestRepository;
     private final PasswordResetCodeRepository passwordResetCodeRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -131,48 +136,25 @@ public class AuthService {
     }
 
     @Transactional
-    public PasswordResetCodeResponse requestPasswordReset(PasswordResetRequest request) {
+    public void requestPasswordReset(PasswordResetRequest request) {
         String email = request.getEmail().trim();
-        PasswordResetCodeResponse genericResponse = PasswordResetCodeResponse.builder()
-                .codeVisible(false)
-                .message("가입된 계정이면 인증 코드가 발급됩니다.")
-                .build();
 
-        return userRepository.findByUsernameIgnoreCase(email)
+        userRepository.findByUsernameIgnoreCase(email)
                 .or(() -> userRepository.findByEmailIgnoreCase(email))
                 .map(user -> {
                     LocalDateTime now = LocalDateTime.now();
-                    passwordResetCodeRepository.findAllByUserAndUsedAtIsNull(user)
-                            .forEach(code -> code.expire(now));
+                    passwordResetApprovalRequestRepository.findAllByUserAndStatus(user, PasswordResetApprovalStatus.PENDING)
+                            .forEach(pending -> pending.reject(null, "새 비밀번호 변경 요청으로 이전 요청이 취소되었습니다.", now));
 
-                    String rawCode = generateCode();
-                    PasswordResetCode resetCode = PasswordResetCode.builder()
+                    PasswordResetApprovalRequest resetRequest = PasswordResetApprovalRequest.builder()
                             .user(user)
-                            .codeHash(hashResetCode(user, rawCode))
-                            .expiresAt(now.plusMinutes(15))
+                            .requestedEmail(email)
+                            .encodedNewPassword(passwordEncoder.encode(request.getNewPassword()))
                             .build();
-                    passwordResetCodeRepository.save(resetCode);
-
-                    try {
-                        passwordResetMailService.sendResetCode(user.getEmail() != null ? user.getEmail() : user.getUsername(), rawCode);
-                    } catch (RuntimeException mailError) {
-                        log.error("비밀번호 재설정 메일 발송 실패: userId={}, email={}", user.getId(), email, mailError);
-                    }
-
-                    if (showPasswordResetCodeInResponse) {
-                        return PasswordResetCodeResponse.builder()
-                                .codeVisible(true)
-                                .resetCode(rawCode)
-                                .message("인증 코드가 발급되었습니다. 화면에 표시된 코드를 입력해 새 비밀번호를 설정하세요.")
-                                .build();
-                    }
-
-                    return PasswordResetCodeResponse.builder()
-                            .codeVisible(false)
-                            .message("가입된 이메일이면 인증 코드가 발송됩니다.")
-                            .build();
-                })
-                .orElse(genericResponse);
+                    passwordResetApprovalRequestRepository.save(resetRequest);
+                    log.info("비밀번호 재설정 승인 요청 생성: userId={}, username={}", user.getId(), user.getUsername());
+                    return resetRequest;
+                });
     }
 
     @Transactional
@@ -199,6 +181,43 @@ public class AuthService {
         resetCode.markUsed(now);
 
         log.info("비밀번호 재설정 완료: userId={}, username={}", user.getId(), user.getUsername());
+    }
+
+    public List<PasswordResetApprovalResponse> getPasswordResetRequests(boolean pendingOnly) {
+        List<PasswordResetApprovalRequest> requests = pendingOnly
+                ? passwordResetApprovalRequestRepository.findAllByStatusOrderByCreatedAtDesc(PasswordResetApprovalStatus.PENDING)
+                : passwordResetApprovalRequestRepository.findAllByOrderByCreatedAtDesc();
+
+        return requests.stream()
+                .map(PasswordResetApprovalResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public PasswordResetApprovalResponse approvePasswordReset(Long requestId, Long adminId) {
+        PasswordResetApprovalRequest request = passwordResetApprovalRequestRepository.findById(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "비밀번호 변경 요청을 찾을 수 없습니다."));
+        if (!request.isPending()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT, "이미 처리된 요청입니다.");
+        }
+
+        request.getUser().replaceEncodedPassword(request.getEncodedNewPassword());
+        request.approve(adminId, LocalDateTime.now());
+        log.info("비밀번호 재설정 승인: requestId={}, userId={}, adminId={}", requestId, request.getUser().getId(), adminId);
+        return PasswordResetApprovalResponse.from(request);
+    }
+
+    @Transactional
+    public PasswordResetApprovalResponse rejectPasswordReset(Long requestId, Long adminId, String reason) {
+        PasswordResetApprovalRequest request = passwordResetApprovalRequestRepository.findById(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "비밀번호 변경 요청을 찾을 수 없습니다."));
+        if (!request.isPending()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT, "이미 처리된 요청입니다.");
+        }
+
+        request.reject(adminId, reason == null || reason.isBlank() ? "관리자가 요청을 거절했습니다." : reason.trim(), LocalDateTime.now());
+        log.info("비밀번호 재설정 거절: requestId={}, userId={}, adminId={}", requestId, request.getUser().getId(), adminId);
+        return PasswordResetApprovalResponse.from(request);
     }
 
     /**

@@ -2,7 +2,6 @@ package com.jinsung.safety_road_inclass.domain.auth.controller;
 
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginResponse;
-import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetCodeResponse;
 import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetConfirmRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.SignupRequest;
@@ -21,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
 
 /**
  * AuthController - 인증 API
@@ -94,10 +94,11 @@ public class AuthController {
 
     @Operation(summary = "비밀번호 재설정 코드 요청", description = "가입 이메일로 비밀번호 재설정 인증 코드를 발송합니다.")
     @PostMapping("/password-reset/request")
-    public ResponseEntity<ApiResponse<PasswordResetCodeResponse>> requestPasswordReset(
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
             @Valid @RequestBody PasswordResetRequest request) {
 
-        return ResponseEntity.ok(ApiResponse.success(authService.requestPasswordReset(request)));
+        authService.requestPasswordReset(request);
+        return ResponseEntity.ok(ApiResponse.success());
     }
 
     @Operation(summary = "비밀번호 재설정", description = "이메일 인증 코드로 새 비밀번호를 설정합니다.")
@@ -133,5 +134,6 @@ public class AuthController {
         
         return ResponseEntity.ok(ApiResponse.success(authService.getUserInfoById(principal.userId())));
     }
+
 }
 
