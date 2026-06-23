@@ -2,6 +2,7 @@ package com.jinsung.safety_road_inclass.domain.auth.service;
 
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginResponse;
+import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetCodeResponse;
 import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetConfirmRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.SignupRequest;
@@ -46,6 +47,9 @@ public class AuthService {
 
     @Value("${app.password-reset.code-secret:${jwt.secret}}")
     private String passwordResetCodeSecret;
+
+    @Value("${app.password-reset.show-code-in-response:true}")
+    private boolean showPasswordResetCodeInResponse;
 
     /**
      * 회원가입
@@ -127,12 +131,16 @@ public class AuthService {
     }
 
     @Transactional
-    public void requestPasswordReset(PasswordResetRequest request) {
+    public PasswordResetCodeResponse requestPasswordReset(PasswordResetRequest request) {
         String email = request.getEmail().trim();
+        PasswordResetCodeResponse genericResponse = PasswordResetCodeResponse.builder()
+                .codeVisible(false)
+                .message("가입된 계정이면 인증 코드가 발급됩니다.")
+                .build();
 
-        userRepository.findByUsernameIgnoreCase(email)
+        return userRepository.findByUsernameIgnoreCase(email)
                 .or(() -> userRepository.findByEmailIgnoreCase(email))
-                .ifPresent(user -> {
+                .map(user -> {
                     LocalDateTime now = LocalDateTime.now();
                     passwordResetCodeRepository.findAllByUserAndUsedAtIsNull(user)
                             .forEach(code -> code.expire(now));
@@ -150,7 +158,21 @@ public class AuthService {
                     } catch (RuntimeException mailError) {
                         log.error("비밀번호 재설정 메일 발송 실패: userId={}, email={}", user.getId(), email, mailError);
                     }
-                });
+
+                    if (showPasswordResetCodeInResponse) {
+                        return PasswordResetCodeResponse.builder()
+                                .codeVisible(true)
+                                .resetCode(rawCode)
+                                .message("인증 코드가 발급되었습니다. 화면에 표시된 코드를 입력해 새 비밀번호를 설정하세요.")
+                                .build();
+                    }
+
+                    return PasswordResetCodeResponse.builder()
+                            .codeVisible(false)
+                            .message("가입된 이메일이면 인증 코드가 발송됩니다.")
+                            .build();
+                })
+                .orElse(genericResponse);
     }
 
     @Transactional

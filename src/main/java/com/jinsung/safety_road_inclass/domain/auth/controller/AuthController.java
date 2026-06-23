@@ -2,6 +2,7 @@ package com.jinsung.safety_road_inclass.domain.auth.controller;
 
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.LoginResponse;
+import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetCodeResponse;
 import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetConfirmRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.PasswordResetRequest;
 import com.jinsung.safety_road_inclass.domain.auth.dto.SignupRequest;
@@ -93,11 +94,10 @@ public class AuthController {
 
     @Operation(summary = "비밀번호 재설정 코드 요청", description = "가입 이메일로 비밀번호 재설정 인증 코드를 발송합니다.")
     @PostMapping("/password-reset/request")
-    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
+    public ResponseEntity<ApiResponse<PasswordResetCodeResponse>> requestPasswordReset(
             @Valid @RequestBody PasswordResetRequest request) {
 
-        authService.requestPasswordReset(request);
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.ok(ApiResponse.success(authService.requestPasswordReset(request)));
     }
 
     @Operation(summary = "비밀번호 재설정", description = "이메일 인증 코드로 새 비밀번호를 설정합니다.")
