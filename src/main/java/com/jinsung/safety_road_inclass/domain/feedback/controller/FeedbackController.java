@@ -1,6 +1,8 @@
 package com.jinsung.safety_road_inclass.domain.feedback.controller;
 
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.auth.service.AuthService;
+import com.jinsung.safety_road_inclass.domain.auth.service.JwtTokenProvider.CustomUserPrincipal;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackCreateRequest;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackPostResponse;
 import com.jinsung.safety_road_inclass.domain.feedback.service.FeedbackService;
@@ -18,16 +20,19 @@ import java.util.List;
 public class FeedbackController {
 
     private final FeedbackService feedbackService;
+    private final AuthService authService;
 
     @PostMapping
     public ApiResponse<FeedbackPostResponse> create(
-            @AuthenticationPrincipal User currentUser,
+            @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody FeedbackCreateRequest request) {
+        User currentUser = authService.getUserById(principal.userId());
         return ApiResponse.success(feedbackService.create(request, currentUser));
     }
 
     @GetMapping("/me")
-    public ApiResponse<List<FeedbackPostResponse>> getMine(@AuthenticationPrincipal User currentUser) {
+    public ApiResponse<List<FeedbackPostResponse>> getMine(@AuthenticationPrincipal CustomUserPrincipal principal) {
+        User currentUser = authService.getUserById(principal.userId());
         return ApiResponse.success(feedbackService.getMine(currentUser));
     }
 }

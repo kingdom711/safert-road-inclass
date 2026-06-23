@@ -1,6 +1,8 @@
 package com.jinsung.safety_road_inclass.domain.feedback.controller;
 
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.auth.service.AuthService;
+import com.jinsung.safety_road_inclass.domain.auth.service.JwtTokenProvider.CustomUserPrincipal;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackPostResponse;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackReplyRequest;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackStatusUpdateRequest;
@@ -20,6 +22,7 @@ import java.util.List;
 public class AdminFeedbackController {
 
     private final FeedbackService feedbackService;
+    private final AuthService authService;
 
     @GetMapping
     public ApiResponse<List<FeedbackPostResponse>> getAll(@RequestParam(required = false) FeedbackStatus status) {
@@ -35,9 +38,10 @@ public class AdminFeedbackController {
 
     @PostMapping("/{postId}/reply")
     public ApiResponse<FeedbackPostResponse> reply(
-            @AuthenticationPrincipal User currentUser,
+            @AuthenticationPrincipal CustomUserPrincipal principal,
             @PathVariable Long postId,
             @Valid @RequestBody FeedbackReplyRequest request) {
+        User currentUser = authService.getUserById(principal.userId());
         return ApiResponse.success(feedbackService.reply(postId, request.getReply(), currentUser));
     }
 }
