@@ -78,7 +78,7 @@ public class TeamMembershipService {
                                 .joinedAt(LocalDateTime.now())
                                 .build()));
 
-        alertService.createTeamNotification(
+        notifyTeamSafely(
                 team.getLeader(),
                 applicant,
                 AlertType.TEAM_JOIN_REQUESTED,
@@ -135,7 +135,7 @@ public class TeamMembershipService {
         member.approve(requester);
         target.assignTeam(team);
 
-        alertService.createTeamNotification(
+        notifyTeamSafely(
                 target,
                 requester,
                 AlertType.TEAM_JOIN_APPROVED,
@@ -160,7 +160,7 @@ public class TeamMembershipService {
         }
 
         teamMemberRepository.delete(member);
-        alertService.createTeamNotification(
+        notifyTeamSafely(
                 target,
                 team.getLeader(),
                 AlertType.TEAM_JOIN_REJECTED,
@@ -216,7 +216,7 @@ public class TeamMembershipService {
         if (target.getTeam() != null && target.getTeam().getId().equals(teamId)) {
             target.clearTeam();
         }
-        alertService.createTeamNotification(
+        notifyTeamSafely(
                 target,
                 team.getLeader(),
                 AlertType.TEAM_MEMBER_KICKED,
@@ -261,5 +261,17 @@ public class TeamMembershipService {
         return user != null
                 && !NON_PARTICIPANT_ROLES.contains(user.getRole())
                 && !"admin".equalsIgnoreCase(user.getUsername());
+    }
+
+    private void notifyTeamSafely(User recipient, User actor, AlertType type, String title, String message) {
+        try {
+            alertService.createTeamNotification(recipient, actor, type, title, message);
+        } catch (Exception e) {
+            log.warn("Team notification failed but membership action will continue: type={}, recipient={}, actor={}",
+                    type,
+                    recipient != null ? recipient.getId() : null,
+                    actor != null ? actor.getId() : null,
+                    e);
+        }
     }
 }

@@ -12,6 +12,7 @@ import com.jinsung.safety_road_inclass.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -94,7 +95,7 @@ public class AlertService {
         return AlertResponse.from(saved);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createTeamNotification(User recipient, User actor, AlertType type, String title, String message) {
         if (recipient == null) {
             return;

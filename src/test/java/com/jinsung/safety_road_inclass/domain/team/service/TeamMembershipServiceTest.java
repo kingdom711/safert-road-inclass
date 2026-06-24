@@ -83,6 +83,27 @@ class TeamMembershipServiceTest {
     }
 
     @Test
+    @DisplayName("requestJoin: 알림 생성이 실패해도 가입 신청은 PENDING으로 완료")
+    void requestJoin_continues_when_notification_fails() {
+        User leader = user(1L, "leader");
+        User alice = user(2L, "alice");
+        Team t = team(10L, leader);
+
+        when(teamRepository.findById(10L)).thenReturn(Optional.of(t));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(alice));
+        when(teamMemberRepository.existsByUserAndStatus(alice, MembershipStatus.ACTIVE)).thenReturn(false);
+        when(teamMemberRepository.findByTeamAndUser(t, alice)).thenReturn(Optional.empty());
+        when(teamMemberRepository.save(any(TeamMember.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("alert table is out of sync"))
+                .when(alertService)
+                .createTeamNotification(any(), any(), any(), any(), any());
+
+        var res = service.requestJoin(10L, 2L);
+
+        assertThat(res.getStatus()).isEqualTo(MembershipStatus.PENDING);
+    }
+
+    @Test
     @DisplayName("requestJoin: 이미 ACTIVE 멤버십 보유 시 TEAM_ALREADY_JOINED")
     void requestJoin_blocked_when_active_elsewhere() {
         User leader = user(1L, "leader");
