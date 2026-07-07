@@ -122,4 +122,4 @@ npm run dev              # http://localhost:5173
 ## 9. 시연
 
 - 운영 백엔드: https://port-0-safert-road-inclass-mjr54f7m2ffa493e.sel3.cloudtype.app (Swagger: `/swagger-ui/index.html`)
-- 운영 프론트: (Vercel 배포 URL — 공유 시 기입)
+- 운영 프론트: https://www.safety-road.online
