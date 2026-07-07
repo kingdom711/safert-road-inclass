@@ -32,6 +32,11 @@ public interface EducationCompletionRepository extends JpaRepository<EducationCo
     /**
      * 특정 유저의 전체 수료 이력 조회
      */
+    Optional<EducationCompletion> findFirstByUserIdAndEducationIdAndQuizPassedOrderByCompletedAtDesc(
+            Long userId,
+            String educationId,
+            boolean quizPassed);
+
     List<EducationCompletion> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     /**

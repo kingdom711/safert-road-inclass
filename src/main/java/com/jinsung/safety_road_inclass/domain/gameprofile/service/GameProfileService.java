@@ -8,7 +8,6 @@ import com.jinsung.safety_road_inclass.domain.gameprofile.entity.UserGameProfile
 import com.jinsung.safety_road_inclass.domain.gameprofile.entity.UserSpecialization;
 import com.jinsung.safety_road_inclass.domain.gameprofile.repository.GameProfileRepository;
 import com.jinsung.safety_road_inclass.domain.gameprofile.repository.UserSpecializationRepository;
-import com.jinsung.safety_road_inclass.domain.point.entity.UserPoints;
 import com.jinsung.safety_road_inclass.domain.point.repository.UserPointsRepository;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
@@ -244,18 +243,8 @@ public class GameProfileService {
             }
         }
 
-        // 3. 포인트 동기화 (서버에 없으면 생성)
-        if (request.getPointsBalance() > 0) {
-            UserPoints userPoints = userPointsRepository.findByUserId(userId)
-                    .orElseGet(() -> {
-                        UserPoints up = new UserPoints(user);
-                        return userPointsRepository.save(up);
-                    });
-            // 서버의 포인트가 0이면 localStorage 값으로 설정
-            if (userPoints.getBalance() == 0 && request.getPointsBalance() > 0) {
-                userPoints.earn(request.getPointsBalance());
-            }
-        }
+        // Client-side point balances are not authoritative. Points must be earned
+        // through server-side reward flows so stale localStorage cannot inflate balances.
 
         log.info("Game data synced from localStorage: userId={}, level={}", userId, request.getLevel());
 

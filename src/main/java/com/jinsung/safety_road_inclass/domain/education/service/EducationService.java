@@ -127,6 +127,17 @@ public class EducationService {
                                               String userAgent) {
         User user = findUser(userId);
 
+        if (Boolean.TRUE.equals(req.getQuizPassed())) {
+            var existingCompletion = completionRepository
+                    .findFirstByUserIdAndEducationIdAndQuizPassedOrderByCompletedAtDesc(
+                            userId, req.getEducationId(), true);
+            if (existingCompletion.isPresent()) {
+                log.info("[Education] Duplicate completion ignored: userId={}, educationId={}, completionId={}",
+                        userId, req.getEducationId(), existingCompletion.get().getId());
+                return EducationCompleteResponse.from(existingCompletion.get());
+            }
+        }
+
         // 1. 시작 시각 파싱 (클라이언트 제출값)
         LocalDateTime startedAt = LocalDateTime.parse(req.getStartedAt(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 

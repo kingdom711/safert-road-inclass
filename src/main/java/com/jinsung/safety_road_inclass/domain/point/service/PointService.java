@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class PointService {
 
+    private static final String EDUCATION_COMPLETED_REASON = "\uAD50\uC721 \uC644\uB8CC";
+
     private final UserPointsRepository userPointsRepository;
     private final PointTransactionRepository pointTransactionRepository;
     private final UserRepository userRepository;
@@ -52,6 +54,19 @@ public class PointService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (isDuplicateEducationReward(userId, reason, description)) {
+            int currentBalance = userPointsRepository.findByUserId(userId)
+                    .map(UserPoints::getBalance)
+                    .orElse(0);
+            log.info("Duplicate education reward ignored: userId={}, reason={}, description={}, balance={}",
+                    userId, reason, description, currentBalance);
+            return AddPointsResponse.builder()
+                    .amount(0)
+                    .balanceAfter(currentBalance)
+                    .reason(reason)
+                    .build();
+        }
 
         UserPoints userPoints = userPointsRepository.findByUserId(userId)
                 .orElseGet(() -> userPointsRepository.save(new UserPoints(user)));
@@ -123,5 +138,11 @@ public class PointService {
     public Page<PointTransactionResponse> getHistory(Long userId, Pageable pageable) {
         return pointTransactionRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(PointTransactionResponse::from);
+    }
+
+    private boolean isDuplicateEducationReward(Long userId, String reason, String description) {
+        return EDUCATION_COMPLETED_REASON.equals(reason)
+                && pointTransactionRepository.existsByUserIdAndTypeAndReasonAndDescription(
+                        userId, TransactionType.EARN, reason, description);
     }
 }
