@@ -116,8 +116,16 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-task_run_log.txt
-task_run_log_2.txt
+task_run_log*.txt
+build_log*.txt
+bootRun_log*.txt
+test_output.txt
+commit_msg*.txt
+
+# ===========================================
+# User Uploads
+# ===========================================
+uploads/
 
 # ===========================================
 # Testing & Coverage
