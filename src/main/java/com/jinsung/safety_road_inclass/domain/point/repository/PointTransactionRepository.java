@@ -21,6 +21,11 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
      */
     Page<PointTransaction> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
+    boolean existsByUserIdAndTypeAndReasonAndDescription(Long userId,
+                                                         TransactionType type,
+                                                         String reason,
+                                                         String description);
+
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PointTransaction p " +
             "WHERE p.user.id = :userId AND p.type = :type " +
             "AND p.createdAt >= :start AND p.createdAt < :end")
