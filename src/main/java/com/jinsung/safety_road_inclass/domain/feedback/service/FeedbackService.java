@@ -1,12 +1,16 @@
 package com.jinsung.safety_road_inclass.domain.feedback.service;
 
+import com.jinsung.safety_road_inclass.domain.auth.entity.Role;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackCommentResponse;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackCreateRequest;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackPostResponse;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.NoticeCreateRequest;
 import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackCategory;
+import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackComment;
 import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackPost;
 import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackStatus;
+import com.jinsung.safety_road_inclass.domain.feedback.repository.FeedbackCommentRepository;
 import com.jinsung.safety_road_inclass.domain.feedback.repository.FeedbackPostRepository;
 import com.jinsung.safety_road_inclass.global.error.CustomException;
 import com.jinsung.safety_road_inclass.global.error.ErrorCode;
@@ -15,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +28,7 @@ import java.util.List;
 public class FeedbackService {
 
     private final FeedbackPostRepository feedbackPostRepository;
+    private final FeedbackCommentRepository feedbackCommentRepository;
 
     @Transactional
     public FeedbackPostResponse create(FeedbackCreateRequest request, User author) {
@@ -55,9 +62,56 @@ public class FeedbackService {
     }
 
     public List<FeedbackPostResponse> getNotices() {
-        return feedbackPostRepository.findByCategoryOrderByCreatedAtDesc(FeedbackCategory.NOTICE).stream()
-                .map(FeedbackPostResponse::from)
+        List<FeedbackPost> notices = feedbackPostRepository.findByCategoryOrderByCreatedAtDesc(FeedbackCategory.NOTICE);
+        if (notices.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> noticeIds = notices.stream().map(FeedbackPost::getId).toList();
+        Map<Long, List<FeedbackCommentResponse>> commentsByPost =
+                feedbackCommentRepository.findByPostIdInOrderByCreatedAtAsc(noticeIds).stream()
+                        .collect(Collectors.groupingBy(
+                                comment -> comment.getPost().getId(),
+                                Collectors.mapping(FeedbackCommentResponse::from, Collectors.toList())));
+
+        return notices.stream()
+                .map(post -> FeedbackPostResponse.withComments(
+                        post, commentsByPost.getOrDefault(post.getId(), List.of())))
                 .toList();
+    }
+
+    @Transactional
+    public FeedbackCommentResponse addNoticeComment(Long postId, String content, User author) {
+        FeedbackPost post = findPost(postId);
+        if (post.getCategory() != FeedbackCategory.NOTICE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        FeedbackComment comment = FeedbackComment.builder()
+                .post(post)
+                .author(author)
+                .content(content.trim())
+                .build();
+
+        return FeedbackCommentResponse.from(feedbackCommentRepository.save(comment));
+    }
+
+    @Transactional
+    public void deleteNoticeComment(Long postId, Long commentId, User requester) {
+        FeedbackComment comment = feedbackCommentRepository.findById(commentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        if (!comment.getPost().getId().equals(postId)) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        boolean isAdmin = requester.getRole() == Role.ROLE_ADMIN || requester.getRole() == Role.ROLE_PROJECT_ADMIN;
+        boolean isAuthor = comment.getAuthor().getId().equals(requester.getId());
+        if (!isAdmin && !isAuthor) {
+            throw new CustomException(ErrorCode.AUTH_ACCESS_DENIED);
+        }
+
+        feedbackCommentRepository.delete(comment);
     }
 
     @Transactional
@@ -80,6 +134,7 @@ public class FeedbackService {
         if (post.getCategory() != FeedbackCategory.NOTICE) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
+        feedbackCommentRepository.deleteByPost(post);
         feedbackPostRepository.delete(post);
     }
 

@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -26,6 +27,15 @@ public class FeedbackPostResponse {
     private LocalDateTime repliedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // 공지 응답에만 포함되는 댓글 목록 (일반 의견 응답에서는 null)
+    private List<FeedbackCommentResponse> comments;
+
+    public static FeedbackPostResponse withComments(FeedbackPost post, List<FeedbackCommentResponse> comments) {
+        FeedbackPostResponse response = from(post);
+        response.comments = comments;
+        return response;
+    }
 
     public static FeedbackPostResponse from(FeedbackPost post) {
         return FeedbackPostResponse.builder()
