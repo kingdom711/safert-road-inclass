@@ -4,5 +4,6 @@ public enum FeedbackCategory {
     ERROR,
     SUGGESTION,
     QUESTION,
-    OTHER
+    OTHER,
+    NOTICE
 }

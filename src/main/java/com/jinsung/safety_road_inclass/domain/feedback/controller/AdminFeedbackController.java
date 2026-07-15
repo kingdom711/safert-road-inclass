@@ -6,6 +6,7 @@ import com.jinsung.safety_road_inclass.domain.auth.service.JwtTokenProvider.Cust
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackPostResponse;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackReplyRequest;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackStatusUpdateRequest;
+import com.jinsung.safety_road_inclass.domain.feedback.dto.NoticeCreateRequest;
 import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackStatus;
 import com.jinsung.safety_road_inclass.domain.feedback.service.FeedbackService;
 import com.jinsung.safety_road_inclass.global.common.ApiResponse;
@@ -43,5 +44,19 @@ public class AdminFeedbackController {
             @Valid @RequestBody FeedbackReplyRequest request) {
         User currentUser = authService.getUserById(principal.userId());
         return ApiResponse.success(feedbackService.reply(postId, request.getReply(), currentUser));
+    }
+
+    @PostMapping("/notice")
+    public ApiResponse<FeedbackPostResponse> createNotice(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @Valid @RequestBody NoticeCreateRequest request) {
+        User currentUser = authService.getUserById(principal.userId());
+        return ApiResponse.success(feedbackService.createNotice(request, currentUser));
+    }
+
+    @DeleteMapping("/notice/{postId}")
+    public ApiResponse<Void> deleteNotice(@PathVariable Long postId) {
+        feedbackService.deleteNotice(postId);
+        return ApiResponse.success();
     }
 }

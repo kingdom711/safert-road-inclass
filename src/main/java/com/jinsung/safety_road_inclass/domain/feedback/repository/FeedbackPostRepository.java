@@ -1,6 +1,7 @@
 package com.jinsung.safety_road_inclass.domain.feedback.repository;
 
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
+import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackCategory;
 import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackPost;
 import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,7 +12,9 @@ public interface FeedbackPostRepository extends JpaRepository<FeedbackPost, Long
 
     List<FeedbackPost> findByAuthorOrderByCreatedAtDesc(User author);
 
-    List<FeedbackPost> findByStatusOrderByCreatedAtDesc(FeedbackStatus status);
+    List<FeedbackPost> findByCategoryOrderByCreatedAtDesc(FeedbackCategory category);
 
-    List<FeedbackPost> findAllByOrderByCreatedAtDesc();
+    List<FeedbackPost> findByCategoryNotOrderByCreatedAtDesc(FeedbackCategory category);
+
+    List<FeedbackPost> findByStatusAndCategoryNotOrderByCreatedAtDesc(FeedbackStatus status, FeedbackCategory category);
 }

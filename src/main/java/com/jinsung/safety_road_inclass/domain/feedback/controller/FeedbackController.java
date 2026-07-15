@@ -35,4 +35,9 @@ public class FeedbackController {
         User currentUser = authService.getUserById(principal.userId());
         return ApiResponse.success(feedbackService.getMine(currentUser));
     }
+
+    @GetMapping("/notices")
+    public ApiResponse<List<FeedbackPostResponse>> getNotices() {
+        return ApiResponse.success(feedbackService.getNotices());
+    }
 }

@@ -3,6 +3,8 @@ package com.jinsung.safety_road_inclass.domain.feedback.service;
 import com.jinsung.safety_road_inclass.domain.auth.entity.User;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackCreateRequest;
 import com.jinsung.safety_road_inclass.domain.feedback.dto.FeedbackPostResponse;
+import com.jinsung.safety_road_inclass.domain.feedback.dto.NoticeCreateRequest;
+import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackCategory;
 import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackPost;
 import com.jinsung.safety_road_inclass.domain.feedback.entity.FeedbackStatus;
 import com.jinsung.safety_road_inclass.domain.feedback.repository.FeedbackPostRepository;
@@ -41,14 +43,44 @@ public class FeedbackService {
                 .toList();
     }
 
+    // 공지(NOTICE)는 별도 목록으로 관리하므로 관리자 의견 목록에서 제외
     public List<FeedbackPostResponse> getAll(FeedbackStatus status) {
         List<FeedbackPost> posts = status != null
-                ? feedbackPostRepository.findByStatusOrderByCreatedAtDesc(status)
-                : feedbackPostRepository.findAllByOrderByCreatedAtDesc();
+                ? feedbackPostRepository.findByStatusAndCategoryNotOrderByCreatedAtDesc(status, FeedbackCategory.NOTICE)
+                : feedbackPostRepository.findByCategoryNotOrderByCreatedAtDesc(FeedbackCategory.NOTICE);
 
         return posts.stream()
                 .map(FeedbackPostResponse::from)
                 .toList();
+    }
+
+    public List<FeedbackPostResponse> getNotices() {
+        return feedbackPostRepository.findByCategoryOrderByCreatedAtDesc(FeedbackCategory.NOTICE).stream()
+                .map(FeedbackPostResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public FeedbackPostResponse createNotice(NoticeCreateRequest request, User admin) {
+        FeedbackPost post = FeedbackPost.builder()
+                .author(admin)
+                .category(FeedbackCategory.NOTICE)
+                .title(request.getTitle().trim())
+                .content(request.getContent().trim())
+                .build();
+        // 공지는 답변/처리 흐름이 없으므로 대기 건수에 잡히지 않도록 종료 상태로 저장
+        post.updateStatus(FeedbackStatus.CLOSED);
+
+        return FeedbackPostResponse.from(feedbackPostRepository.save(post));
+    }
+
+    @Transactional
+    public void deleteNotice(Long postId) {
+        FeedbackPost post = findPost(postId);
+        if (post.getCategory() != FeedbackCategory.NOTICE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        feedbackPostRepository.delete(post);
     }
 
     @Transactional
